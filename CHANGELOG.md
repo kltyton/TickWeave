@@ -2,6 +2,7 @@
 
 ## 2.1.11 — Minecraft 1.20.1
 
+- Allow Cupboard on Fabric with owner-thread entity registration, retaining its hooks; remove the unused MixinSquared entrypoint so installing that library does not load a missing canceller class.
 - Run native game connection ticks in parallel ownership groups, coordinating connection closure, listener replacement and packet handling without a global player-tick lock.
 - Initialize concurrent chunk visibility storage before entity sections capture it, preserving the native hidden default during parallel natural spawning.
 - Protect supported shared collection access in otherwise unmixed mod classes through loader-specific bootstrap entrypoints; retain backing collection types, null behavior and callback semantics.

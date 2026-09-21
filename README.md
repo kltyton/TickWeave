@@ -66,7 +66,7 @@ Administrative commands:
 
 ## Compatibility
 
-Do not combine with Moonrise. Fabric also declares Cupboard incompatible. Forge entity registration uses the server thread, including when Cupboard checks its thread ownership. Carpet's `lagFreeSpawning` rule conflicts with parallel spawning; disable parallel spawning when using that rule. Existing compatibility hooks are conditional on the corresponding mods being installed. Version 2.1.1 updates the Forge SophisticatedCore hooks for `SlotValueMap` (Core 1.3.21.1676 / Backpacks 3.24.35.1675).
+Do not combine with Moonrise. Entity registration uses the server thread on both loaders, including when Cupboard checks its thread ownership; Cupboard's hooks remain enabled. Clickable Advancements and Biome Music provide separate advancement and music features that TickWeave does not replace. TickWeave does not register a MixinSquared canceller. Carpet's `lagFreeSpawning` rule conflicts with parallel spawning; disable parallel spawning when using that rule. Existing compatibility hooks are conditional on the corresponding mods being installed. Version 2.1.1 updates the Forge SophisticatedCore hooks for `SlotValueMap` (Core 1.3.21.1676 / Backpacks 3.24.35.1675).
 
 Use a copy of your modpack and world when evaluating a new build. Changing `synchronizedEntities` does not bypass a failing callback in the current scheduler. Report the loader, mod versions, `latest.log`, crash report and reproduction steps through [GitHub Issues](https://github.com/kltyton/TickWeave/issues).
 

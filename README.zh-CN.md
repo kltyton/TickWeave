@@ -66,7 +66,7 @@ TickWeave 将 Minecraft 的实体 tick 分配给多个 CPU 工作线程，旨在
 
 ## 兼容性
 
-不要与 Moonrise 同时使用。Fabric 元数据还声明与 Cupboard 不兼容。Forge 的实体注册在服务器线程执行，也适用于 Cupboard 对注册线程的检查。Carpet 的 `lagFreeSpawning` 规则与并行刷怪冲突，使用该规则时请关闭并行刷怪。兼容补丁只在对应模组安装时加载。2.1.1 更新了 Forge SophisticatedCore 的 `SlotValueMap` 兼容处理，对应 Core 1.3.21.1676 / Backpacks 3.24.35.1675。
+不要与 Moonrise 同时使用。两种加载器的实体注册都在服务器线程执行，也适用于 Cupboard 对注册线程的检查；Cupboard 的注入保持启用。Clickable Advancements 和 Biome Music 分别提供进度交互与音乐功能，TickWeave 不替代这些功能，也不注册 MixinSquared 取消器。Carpet 的 `lagFreeSpawning` 规则与并行刷怪冲突，使用该规则时请关闭并行刷怪。兼容补丁只在对应模组安装时加载。2.1.1 更新了 Forge SophisticatedCore 的 `SlotValueMap` 兼容处理，对应 Core 1.3.21.1676 / Backpacks 3.24.35.1675。
 
 评估新构建时使用整合包和世界副本。当前调度器不会因修改 `synchronizedEntities` 而绕过出错的回调。通过 [GitHub Issues](https://github.com/kltyton/TickWeave/issues) 提交加载器、模组版本、`latest.log`、崩溃报告和复现步骤。
 
