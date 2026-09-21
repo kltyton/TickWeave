@@ -20,11 +20,14 @@
  */
 package com.axalotl.async.common.mixin.entity;
 
+import com.axalotl.async.common.entity.query.EntityLookupView;
 import com.axalotl.async.common.parallelised.ConcurrentCollections;
 import com.axalotl.async.common.parallelised.fastutil.Int2ObjectConcurrentHashMap;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.objects.ObjectCollection;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.world.level.entity.EntityAccess;
@@ -40,6 +43,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/** Protects lookup updates and reuses membership arrays between registrations. */
 @Mixin(value = { EntityLookup.class })
 public abstract class EntityLookupMixin<T extends EntityAccess> {
     @Unique
@@ -52,11 +56,14 @@ public abstract class EntityLookupMixin<T extends EntityAccess> {
     @Final
     @Mutable
     private Int2ObjectMap<T> byId;
+    @Unique
+    private EntityLookupView<T> tickweave$view;
 
     @Inject(method = { "<init>" }, at = { @At(value = "TAIL") })
     private void replaceConVars(CallbackInfo ci) {
         this.byId = new Int2ObjectConcurrentHashMap<T>();
         this.byUuid = ConcurrentCollections.newHashMap();
+        this.tickweave$view = new EntityLookupView<>(this.byId);
     }
 
     @Inject(method = { "add" }, at = { @At(value = "HEAD") }, cancellable = true)
@@ -67,10 +74,12 @@ public abstract class EntityLookupMixin<T extends EntityAccess> {
         this.byUuid.compute(uuid, (k, existing) -> {
             if (existing == null) {
                 this.byId.put(id, entity);
+                this.tickweave$view.invalidate();
                 return entity;
             }
             if (existing.getId() == id) {
                 this.byId.put(id, entity);
+                this.tickweave$view.invalidate();
                 return entity;
             }
             LOGGER.warn("Duplicate entity UUID {}: existing={}, new={}", new Object[] { uuid, existing, entity });
@@ -86,10 +95,19 @@ public abstract class EntityLookupMixin<T extends EntityAccess> {
         this.byUuid.computeIfPresent(uuid, (k, existing) -> {
             if (existing.getId() == id) {
                 this.byId.remove(id);
+                this.tickweave$view.invalidate();
                 return null;
             }
             return existing;
         });
+    }
+
+    @WrapOperation(method = "getAllEntities", at = @At(value = "INVOKE",
+            target = "Lit/unimi/dsi/fastutil/ints/Int2ObjectMap;values()Lit/unimi/dsi/fastutil/objects/ObjectCollection;"))
+    private ObjectCollection<T> tickweave$membershipView(Int2ObjectMap<T> map,
+                                                        Operation<ObjectCollection<T>> original) {
+        return tickweave$view != null && tickweave$view.isFor(map)
+                ? tickweave$view : original.call(map);
     }
 
     @WrapMethod(method = { "getEntity(Ljava/util/UUID;)Lnet/minecraft/world/level/entity/EntityAccess;" })

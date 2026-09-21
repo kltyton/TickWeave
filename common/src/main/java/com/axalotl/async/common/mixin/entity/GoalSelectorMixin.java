@@ -9,7 +9,7 @@
  */
 package com.axalotl.async.common.mixin.entity;
 
-import com.axalotl.async.common.parallelised.ConcurrentCollections;
+import com.axalotl.async.common.parallelised.ConcurrentOrderedSet;
 import java.util.Set;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
@@ -19,6 +19,6 @@ import org.spongepowered.asm.mixin.Shadow;
 @Mixin(value={GoalSelector.class})
 public class GoalSelectorMixin {
     @Shadow
-    private final Set<WrappedGoal> availableGoals = ConcurrentCollections.newHashSet();
+    private final Set<WrappedGoal> availableGoals = new ConcurrentOrderedSet<>();
 }
 

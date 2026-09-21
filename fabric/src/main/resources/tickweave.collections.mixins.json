@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8.7",
+  "priority": 10000,
+  "package": "com.axalotl.async.generated",
+  "plugin": "com.axalotl.async.fabric.bootstrap.FabricCollectionPlugin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": []
+}

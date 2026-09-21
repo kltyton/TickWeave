@@ -28,6 +28,10 @@
  */
 package com.axalotl.async.common.mixin.entity;
 
+import com.axalotl.async.common.entity.task.CooperativeTask;
+import com.axalotl.async.common.entity.task.EntityTaskAccess;
+import com.axalotl.async.common.entity.task.EntityTasks;
+
 import com.axalotl.async.common.mixin.accessor.EntityAccessor;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -42,6 +46,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -56,7 +61,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value={Entity.class})
-public abstract class EntityMixin {
+public abstract class EntityMixin implements EntityTaskAccess {
+    @Unique private volatile CooperativeTask tickweave$taskOwner;
+    @Shadow private EntityInLevelCallback levelCallback;
+
+    @Override
+    public boolean tickweave$inLevel() {
+        return levelCallback != null && levelCallback != EntityInLevelCallback.NULL;
+    }
+
+    @Override
+    public CooperativeTask tickweave$taskOwner() {
+        CooperativeTask task = tickweave$taskOwner;
+        if (task == null) {
+            synchronized (this) {
+                task = tickweave$taskOwner;
+                if (task == null) tickweave$taskOwner = task = new CooperativeTask();
+            }
+        }
+        return task;
+    }
+
     @Shadow
     private ImmutableList<Entity> passengers;
     @Unique
@@ -73,10 +98,27 @@ public abstract class EntityMixin {
      */
     @WrapMethod(method={"setRemoved"})
     private void setRemoved(Entity.RemovalReason reason, Operation<Void> original) {
-        Object object = this.async$lock;
-        synchronized (object) {
-            original.call(new Object[]{reason});
-        }
+        EntityTasks.execute((Entity) (Object) this, () -> original.call(reason));
+    }
+
+    @WrapMethod(method = "push(DDD)V")
+    private void tickweave$push(double x, double y, double z, Operation<Void> original) {
+        EntityTasks.execute((Entity) (Object) this, () -> original.call(x, y, z));
+    }
+
+    @WrapMethod(method = "setDeltaMovement(Lnet/minecraft/world/phys/Vec3;)V")
+    private void tickweave$velocity(net.minecraft.world.phys.Vec3 velocity, Operation<Void> original) {
+        EntityTasks.execute((Entity) (Object) this, () -> original.call(velocity));
+    }
+
+    @WrapMethod(method = "startRiding(Lnet/minecraft/world/entity/Entity;Z)Z")
+    private boolean tickweave$ride(Entity vehicle, boolean force, Operation<Boolean> original) {
+        return EntityTasks.call((Entity) (Object) this, () -> original.call(vehicle, force));
+    }
+
+    @WrapMethod(method = "stopRiding")
+    private void tickweave$stopRiding(Operation<Void> original) {
+        EntityTasks.execute((Entity) (Object) this, () -> original.call());
     }
 
     @WrapMethod(method={"getFeetBlockState"})

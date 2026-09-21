@@ -11,11 +11,12 @@
  */
 package com.axalotl.async.common.mixin.entity;
 
-import com.axalotl.async.common.parallelised.ConcurrentCollections;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.core.Holder;
+import java.util.function.Function;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
@@ -27,6 +28,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/** Keeps attribute storage concurrent without locking buckets for existing attribute reads. */
 @Mixin(value={AttributeMap.class})
 public class AttributeMapMixin {
     @Shadow @Final @Mutable
@@ -40,6 +42,17 @@ public class AttributeMapMixin {
         concurrent.addAll(dirtyAttributes);
         dirtyAttributes = concurrent;
         attributes = new ConcurrentHashMap<>(attributes);
+    }
+
+    @WrapOperation(method = "getInstance(Lnet/minecraft/world/entity/ai/attributes/Attribute;)Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;",
+            at = @At(value = "INVOKE", target = "Ljava/util/Map;computeIfAbsent(Ljava/lang/Object;Ljava/util/function/Function;)Ljava/lang/Object;"))
+    private Object tickweave$existingAttribute(Map<?, ?> map, Object key,
+                                              Function<?, ?> factory, Operation<Object> original) {
+        if (map.getClass() == ConcurrentHashMap.class) {
+            Object existing = map.get(key);
+            if (existing != null) return existing;
+        }
+        return original.call(map, key, factory);
     }
 }
 

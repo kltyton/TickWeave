@@ -64,7 +64,6 @@ dependencies {
     implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextras_version}")) {
         jarJar.ranged(it, "[${mixinextras_version},)")
     }
-
     // compileOnly("com.github.bawnorton.mixinsquared:mixinsquared-forge:0.1.1")
     // compileOnly("com.github.bawnorton.mixinsquared:mixinsquared-common:0.1.1")
     // annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-common:0.1.1")
@@ -76,13 +75,6 @@ dependencies {
     // 4. Optional: Harium for navigation integration
     compileOnly files("../common/libs/Harium-1.0.0.jar")
 
-    // Dedicated servers do not provide the LWJGL core required by Vulkan's module descriptor.
-    implementation(jarJar("org.lwjgl:lwjgl:3.3.1")) {
-        jarJar.ranged(it, "[3.3.1,3.4.0)")
-    }
-    implementation(jarJar("org.lwjgl:lwjgl-vulkan:3.3.1")) {
-        jarJar.ranged(it, "[3.3.1,3.4.0)")
-    }
 }
 
 mixin {
@@ -91,8 +83,14 @@ mixin {
     config 'tickweave.forge.mixins.json'
 }
 
+// The generated shadow mappings must exist even on the first clean build.
+tasks.matching { it.name.startsWith('configureReobfTaskFor') }.configureEach {
+    dependsOn tasks.named('compileJava')
+}
+
 jarJar.enable()
 tasks.named('jarJar').configure {
+    archiveClassifier = 'runtime'
     from(rootProject.file('LICENSE'))
     manifest.attributes('MixinConfigs': 'tickweave.common.mixins.json,tickweave.forge.mixins.json')
 }
@@ -109,6 +107,40 @@ tasks.withType(JavaCompile).configureEach {
     options.incremental = false
 }
 
+tasks.named('compileJava', JavaCompile) {
+    outputs.files(
+            layout.buildDirectory.file('tmp/compileJava/compileJava-mappings.tsrg'),
+            layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json'),
+            layout.buildDirectory.file('tmp/compileJava/tickweave.refmap.json')
+    ).withPropertyName('mixinAnnotationOutputs')
+}
+
 idea.module { downloadJavadoc = downloadSources = true }
 
 layout.buildDirectory.set(file("build"))
+
+evaluationDependsOn(':bootstrap')
+
+sourceSets {
+    bootstrap {
+        compileClasspath += sourceSets.main.compileClasspath
+    }
+}
+
+dependencies { bootstrapImplementation project(':bootstrap') }
+
+def distributionJar = tasks.register('distributionJar', Jar) {
+    dependsOn tasks.named('reobfJarJar'), tasks.named('bootstrapClasses'), project(':bootstrap').tasks.named('classes')
+    archiveBaseName = base.archivesName
+    archiveVersion = project.version
+    archiveClassifier = 'all'
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    from(sourceSets.bootstrap.output)
+    from(project(':bootstrap').sourceSets.main.output)
+    from(tasks.named('jarJar').flatMap { it.archiveFile }) { rename { 'tickweave-runtime.jar' } }
+    from(sourceSets.main.output.resourcesDir) { include 'META-INF/mods.toml', 'tickweave.png' }
+    from(rootProject.file('LICENSE'))
+    manifest.attributes('Automatic-Module-Name': 'tickweave.bootstrap', 'Implementation-Version': project.version)
+}
+
+tasks.named('assemble') { dependsOn distributionJar }

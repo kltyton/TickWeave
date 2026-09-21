@@ -71,10 +71,10 @@ public class ConfigCommand {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildSynchronizedEntitiesCommand() {
-        return (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal((String)"synchronizedEntities").executes(ctx -> {
+        return Commands.literal("synchronizedEntities").executes(ctx -> {
             ConfigCommand.displaySynchronizedEntities((CommandContext<CommandSourceStack>)ctx);
             return 1;
-        })).then(ConfigCommand.buildAddEntityCommand())).then(ConfigCommand.buildRemoveEntityCommand());
+        });
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildAddEntityCommand() {
@@ -133,9 +133,9 @@ public class ConfigCommand {
 
     private static void displaySynchronizedEntities(CommandContext<CommandSourceStack> ctx) {
         Set<String> entities = AsyncConfig.synchronizedEntities.getValue();
-        MutableComponent message = AsyncCommand.prefix.copy().append((Component)Component.literal((String)"Synchronized Entities: ").withStyle(style -> style.withColor(ChatFormatting.WHITE)));
+        MutableComponent message = AsyncCommand.prefix.copy().append((Component)Component.literal((String)"Legacy entries (inactive; all entity types use worker scheduling): ").withStyle(style -> style.withColor(ChatFormatting.WHITE)));
         if (entities.isEmpty()) {
-            message.append((Component)Component.literal((String)"No entities synchronized.").withStyle(style -> style.withColor(ChatFormatting.RED)));
+            message.append((Component)Component.literal((String)"No legacy entries.").withStyle(style -> style.withColor(ChatFormatting.WHITE)));
         } else {
             message.append((Component)Component.literal((String)"\n"));
             entities.forEach(entity -> message.append((Component)Component.literal((String)"- ").withStyle(style -> style.withColor(ChatFormatting.GREEN))).append((Component)Component.literal((String)entity).withStyle(style -> style.withColor(ChatFormatting.YELLOW))).append((Component)Component.literal((String)"\n")));

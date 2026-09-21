@@ -1,8 +1,14 @@
 package com.axalotl.async.common.parallelised.fastutil;
 
+import it.unimi.dsi.fastutil.HashCommon;
+import it.unimi.dsi.fastutil.longs.AbstractLong2ObjectMap.BasicEntry;
+import it.unimi.dsi.fastutil.longs.AbstractLongSet;
+import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.objects.AbstractObjectSet;
 import it.unimi.dsi.fastutil.objects.ObjectCollection;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,6 +26,7 @@ import java.util.function.LongFunction;
  */
 public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> {
 
+    // Packed coordinates collide under Long.hashCode; the reversible mix keeps every original key distinct.
     private final ConcurrentHashMap<Long, V> backing;
     private V defaultReturnValue;
 
@@ -32,8 +39,8 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
 
     @Override
     public V get(long key) {
-        V value = backing.get(key);
-        return (value == null && !backing.containsKey(key)) ? defaultReturnValue : value;
+        V value = backing.get(HashCommon.mix(key));
+        return value == null ? defaultReturnValue : value;
     }
 
     @Override
@@ -49,7 +56,7 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
     @Override
     public void putAll(@NotNull Map<? extends Long, ? extends V> m) {
         Objects.requireNonNull(m, "Source map cannot be null");
-        backing.putAll(m);
+        m.forEach((key, value) -> backing.put(HashCommon.mix(key.longValue()), value));
     }
 
     @Override
@@ -69,12 +76,104 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
 
     @Override
     public ObjectSet<Entry<V>> long2ObjectEntrySet() {
-        return FastUtilHackUtil.entrySetLongWrap(backing);
+        return new AbstractObjectSet<>() {
+            @Override
+            public int size() {
+                return backing.size();
+            }
+
+            @Override
+            public void clear() {
+                backing.clear();
+            }
+
+            @Override
+            public boolean contains(Object object) {
+                return object instanceof Map.Entry<?, ?> entry && entry.getKey() instanceof Long key
+                        && entry.getValue() != null && entry.getValue().equals(backing.get(HashCommon.mix(key.longValue())));
+            }
+
+            @Override
+            public boolean remove(Object object) {
+                return object instanceof Map.Entry<?, ?> entry && entry.getKey() instanceof Long key
+                        && entry.getValue() != null && backing.remove(HashCommon.mix(key.longValue()), entry.getValue());
+            }
+
+            @Override
+            public ObjectIterator<Entry<V>> iterator() {
+                var iterator = backing.entrySet().iterator();
+                return new ObjectIterator<>() {
+                    @Override
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
+
+                    @Override
+                    public Entry<V> next() {
+                        var entry = iterator.next();
+                        return new BasicEntry<>(HashCommon.invMix(entry.getKey().longValue()), entry.getValue()) {
+                            @Override
+                            public V setValue(V value) {
+                                V previous = entry.setValue(value);
+                                this.value = value;
+                                return previous;
+                            }
+                        };
+                    }
+
+                    @Override
+                    public void remove() {
+                        iterator.remove();
+                    }
+                };
+            }
+        };
     }
 
     @Override
     public @NotNull LongSet keySet() {
-        return FastUtilHackUtil.wrapLongSet(backing.keySet());
+        return new AbstractLongSet() {
+            @Override
+            public int size() {
+                return backing.size();
+            }
+
+            @Override
+            public boolean contains(long key) {
+                return backing.containsKey(HashCommon.mix(key));
+            }
+
+            @Override
+            public boolean remove(long key) {
+                return backing.remove(HashCommon.mix(key)) != null;
+            }
+
+            @Override
+            public void clear() {
+                backing.clear();
+            }
+
+            @Override
+            public LongIterator iterator() {
+                var iterator = backing.keySet().iterator();
+                return new LongIterator() {
+                    @Override
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
+
+                    @Override
+                    public long nextLong() {
+                        return HashCommon.invMix(iterator.next().longValue());
+                    }
+
+                    @Override
+                    public void remove() {
+                        iterator.remove();
+                    }
+                };
+            }
+        };
     }
 
     @Override
@@ -84,18 +183,18 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
 
     @Override
     public boolean containsKey(long key) {
-        return backing.containsKey(key);
+        return backing.containsKey(HashCommon.mix(key));
     }
 
     @Override
     public V put(long key, V value) {
-        V previous = backing.put(key, value);
-        return (previous == null && !backing.containsKey(key)) ? defaultReturnValue : previous;
+        V previous = backing.put(HashCommon.mix(key), value);
+        return previous == null ? defaultReturnValue : previous;
     }
 
     @Override
     public V remove(long key) {
-        V previous = backing.remove(key);
+        V previous = backing.remove(HashCommon.mix(key));
         return (previous == null) ? defaultReturnValue : previous;
     }
 
@@ -107,18 +206,20 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
     @Override
     public V computeIfAbsent(long key, @NotNull LongFunction<? extends V> mappingFunction) {
         Objects.requireNonNull(mappingFunction);
-        return backing.computeIfAbsent(key, mappingFunction::apply);
+        V value = backing.computeIfAbsent(HashCommon.mix(key), ignored -> mappingFunction.apply(key));
+        return value == null ? defaultReturnValue : value;
     }
 
     @Override
     public V compute(long key, @NotNull BiFunction<? super Long, ? super V, ? extends V> remappingFunction) {
         Objects.requireNonNull(remappingFunction, "Remapping function cannot be null");
-        return backing.compute(key, remappingFunction);
+        V value = backing.compute(HashCommon.mix(key), (ignored, previous) -> remappingFunction.apply(key, previous));
+        return value == null ? defaultReturnValue : value;
     }
 
     public V getOrDefault(long key, V defaultValue) {
-        V value = backing.get(key);
-        return (value == null && !backing.containsKey(key)) ? defaultValue : value;
+        V value = backing.get(HashCommon.mix(key));
+        return value == null ? defaultValue : value;
     }
 
     /**
@@ -129,7 +230,7 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
      * @return the previous value or defaultReturnValue if none
      */
     public V putIfAbsent(long key, V value) {
-        V previous = backing.putIfAbsent(key, value);
+        V previous = backing.putIfAbsent(HashCommon.mix(key), value);
         return (previous == null) ? defaultReturnValue : previous;
     }
 
@@ -141,7 +242,7 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
      * @return true if the value was removed
      */
     public boolean remove(long key, Object value) {
-        return backing.remove(key, value);
+        return backing.remove(HashCommon.mix(key), value);
     }
 
     /**
@@ -153,7 +254,7 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
      * @return true if the value was replaced
      */
     public boolean replace(long key, V oldValue, V newValue) {
-        return backing.replace(key, oldValue, newValue);
+        return backing.replace(HashCommon.mix(key), oldValue, newValue);
     }
 
     /**
@@ -164,26 +265,34 @@ public final class Long2ObjectConcurrentHashMap<V> implements Long2ObjectMap<V> 
      * @return the previous value or defaultReturnValue if none
      */
     public V replace(long key, V value) {
-        V previous = backing.replace(key, value);
+        V previous = backing.replace(HashCommon.mix(key), value);
         return (previous == null) ? defaultReturnValue : previous;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Long2ObjectMap<?> that)) return false;
-
-        if (size() != that.size()) return false;
-        return long2ObjectEntrySet().containsAll(that.long2ObjectEntrySet());
+    public boolean equals(Object object) {
+        return object == this || object instanceof Map<?, ?> other && size() == other.size()
+                && long2ObjectEntrySet().containsAll(other.entrySet());
     }
 
     @Override
     public int hashCode() {
-        return backing.hashCode();
+        int hash = 0;
+        for (var entry : backing.entrySet()) {
+            hash += Long.hashCode(HashCommon.invMix(entry.getKey().longValue())) ^ entry.getValue().hashCode();
+        }
+        return hash;
     }
 
     @Override
     public String toString() {
-        return backing.toString();
+        StringBuilder result = new StringBuilder("{");
+        for (var entry : backing.entrySet()) {
+            if (result.length() > 1) result.append(", ");
+            result.append(HashCommon.invMix(entry.getKey().longValue())).append('=')
+                    .append(entry.getValue() == this ? "(this Map)" : entry.getValue());
+        }
+        return result.append('}').toString();
     }
+
 }

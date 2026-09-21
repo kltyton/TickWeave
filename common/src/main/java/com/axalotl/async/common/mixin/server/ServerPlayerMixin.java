@@ -14,6 +14,7 @@
  */
 package com.axalotl.async.common.mixin.server;
 
+import com.axalotl.async.common.entity.task.EntityTasks;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.authlib.GameProfile;
@@ -32,8 +33,8 @@ extends Player {
     }
 
     @WrapMethod(method={"die"})
-    private synchronized void onDead(DamageSource damageSource, Operation<Void> original) {
-        original.call(new Object[]{damageSource});
+    private void onDead(DamageSource damageSource, Operation<Void> original) {
+        EntityTasks.damage(this, damageSource, () -> original.call(damageSource));
     }
 }
 

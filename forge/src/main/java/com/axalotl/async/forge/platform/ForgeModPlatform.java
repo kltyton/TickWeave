@@ -7,6 +7,11 @@ import net.minecraftforge.fml.loading.FMLLoader;
 public class ForgeModPlatform implements ModPlatform {
 
     @Override
+    public boolean isSharedEntityMetadataType(Class<?> type) {
+        return net.minecraftforge.fluids.FluidType.class.isAssignableFrom(type);
+    }
+
+    @Override
     public void saveConfig() {
         AsyncConfigForge.saveConfig();
     }

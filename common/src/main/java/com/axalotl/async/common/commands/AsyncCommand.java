@@ -14,7 +14,6 @@
 package com.axalotl.async.common.commands;
 
 import com.axalotl.async.common.commands.ConfigCommand;
-import com.axalotl.async.common.commands.GpuCommand;
 import com.axalotl.async.common.commands.StatsCommand;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -32,7 +31,6 @@ public class AsyncCommand {
         LiteralArgumentBuilder<CommandSourceStack> main = Commands.literal("tickweave");
         main = ConfigCommand.registerConfig(main);
         main = StatsCommand.registerStatus(main);
-        main = GpuCommand.registerGpu(main);
         dispatcher.register(main);
     }
 

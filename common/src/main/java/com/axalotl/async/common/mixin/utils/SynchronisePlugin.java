@@ -1,13 +1,20 @@
 package com.axalotl.async.common.mixin.utils;
 
 import com.axalotl.async.common.AsyncCommon;
+import com.axalotl.async.common.bootstrap.SharedWeakMapExtension;
 import com.axalotl.async.common.platform.PlatformUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
@@ -26,6 +33,7 @@ public class SynchronisePlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
+        SharedWeakMapExtension.register();
         mixin2MethodsExcludeMap.put("com.axalotl.async.common.mixin.utils.SyncAllMixin", "net.minecraft.world.level.chunk.ChunkStatus.isOrAfter");
         syncAllSet.add("com.axalotl.async.common.mixin.utils.FastUtilsMixin");
         syncAllSet.add("com.axalotl.async.common.mixin.utils.SyncAllMixin");
@@ -39,6 +47,10 @@ public class SynchronisePlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.contains(".worldgen.")) {
+            return !PlatformUtils.isModLoaded("c2me") && !PlatformUtils.isModLoaded("c2me-opts-math")
+                    && !PlatformUtils.isModLoaded("noisium") && !PlatformUtils.isModLoaded("harichunk");
+        }
         if (mixinClassName.endsWith(".compat.BlueprintEntityMixin")) {
             return PlatformUtils.isModLoaded("blueprint");
         }
@@ -69,6 +81,18 @@ public class SynchronisePlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        if (mixinClassName.equals("com.axalotl.async.forge.mixin.entity.PersistentDataMixin")) {
+            var field = targetClass.fields.stream().filter(candidate -> candidate.name.equals("persistentData")
+                    && candidate.desc.equals("Lnet/minecraft/nbt/CompoundTag;")).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Missing Forge entity persistentData field"));
+            if ((field.access & (Opcodes.ACC_STATIC | Opcodes.ACC_FINAL)) != 0) {
+                throw new IllegalStateException("Unexpected Forge entity persistentData field flags: " + field.access);
+            }
+            field.access |= Opcodes.ACC_VOLATILE;
+        }
+        if (mixinClassName.equals("com.axalotl.async.forge.mixin.utils.LazyOptionalMixin")) {
+            deferOptionalListeners(targetClass);
+        }
         Collection<String> targetMethods = mixin2MethodsMap.get(mixinClassName);
         Collection<String> excludedMethods = mixin2MethodsExcludeMap.get(mixinClassName);
 
@@ -95,6 +119,40 @@ public class SynchronisePlugin implements IMixinConfigPlugin {
                 }
             }
         }
+    }
+
+    private static void deferOptionalListeners(ClassNode targetClass) {
+        int deferred = 0;
+        for (MethodNode method : targetClass.methods) {
+            if (!method.name.equals("<init>")) continue;
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof FieldInsnNode field) || field.getOpcode() != Opcodes.PUTFIELD
+                        || !field.owner.equals(targetClass.name) || !field.name.equals("listeners")
+                        || !field.desc.equals("Ljava/util/Set;")) continue;
+                AbstractInsnNode init = previousInstruction(field);
+                AbstractInsnNode duplicate = previousInstruction(init);
+                AbstractInsnNode allocation = previousInstruction(duplicate);
+                if (!(init instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
+                        || !call.owner.equals("java/util/HashSet") || !call.name.equals("<init>")
+                        || !call.desc.equals("()V") || duplicate == null || duplicate.getOpcode() != Opcodes.DUP
+                        || !(allocation instanceof TypeInsnNode type) || type.getOpcode() != Opcodes.NEW
+                        || !type.desc.equals("java/util/HashSet")) continue;
+                // The companion Mixin materializes the private set at its first add operation.
+                method.instructions.remove(allocation);
+                method.instructions.remove(duplicate);
+                method.instructions.remove(init);
+                method.instructions.insertBefore(field, new InsnNode(Opcodes.ACONST_NULL));
+                deferred++;
+            }
+        }
+        if (deferred != 1) throw new IllegalStateException("Unexpected LazyOptional listener initializer count: " + deferred);
+    }
+
+    private static AbstractInsnNode previousInstruction(AbstractInsnNode instruction) {
+        if (instruction == null) return null;
+        do { instruction = instruction.getPrevious(); }
+        while (instruction != null && instruction.getOpcode() < 0);
+        return instruction;
     }
 
     private void applySynchronizeBit(ClassNode targetClass, Collection<String> targetMethods, String targetClassName) {

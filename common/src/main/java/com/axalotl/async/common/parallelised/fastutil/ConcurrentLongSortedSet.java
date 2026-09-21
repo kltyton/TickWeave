@@ -4,6 +4,10 @@ import it.unimi.dsi.fastutil.longs.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -13,12 +17,18 @@ import java.util.concurrent.ConcurrentSkipListSet;
  */
 public final class ConcurrentLongSortedSet implements LongSortedSet {
 
-    private final ConcurrentSkipListSet<Long> backing = new ConcurrentSkipListSet<>();
+    private final NavigableSet<Long> backing;
 
     /**
      * Creates a new empty concurrent sorted set
      */
-    public ConcurrentLongSortedSet() {}
+    public ConcurrentLongSortedSet() {
+        backing = new ConcurrentSkipListSet<>();
+    }
+
+    private ConcurrentLongSortedSet(NavigableSet<Long> backing) {
+        this.backing = backing;
+    }
 
     /**
      * Creates a new concurrent sorted set containing elements from the given collection
@@ -33,12 +43,69 @@ public final class ConcurrentLongSortedSet implements LongSortedSet {
 
     @Override
     public LongBidirectionalIterator iterator(long fromElement) {
-        return FastUtilHackUtil.wrap(backing.tailSet(fromElement).iterator());
+        Long previous = backing.floor(fromElement);
+        Iterator<Long> forward = previous == null ? backing.iterator()
+                : backing.higher(fromElement) == null ? Collections.emptyIterator()
+                : backing.tailSet(fromElement, false).iterator();
+        return new SetIterator(forward, previous);
     }
 
     @Override
     public @NotNull LongBidirectionalIterator iterator() {
-        return FastUtilHackUtil.wrap(backing.iterator());
+        return new SetIterator(backing.iterator(), null);
+    }
+
+    public LongIterator iterator(long fromInclusive, long toExclusive) {
+        return LongIterators.asLongIterator(backing.subSet(fromInclusive, true, toExclusive, false).iterator());
+    }
+
+    private final class SetIterator implements LongBidirectionalIterator {
+        private Iterator<Long> forward;
+        private Long previous;
+        private Long current;
+        private boolean movedForward;
+
+        private SetIterator(Iterator<Long> forward, Long previous) {
+            this.forward = forward;
+            this.previous = previous;
+        }
+
+        @Override
+        public boolean hasNext() { return forward.hasNext(); }
+
+        @Override
+        public long nextLong() {
+            current = forward.next();
+            previous = current;
+            movedForward = true;
+            return current;
+        }
+
+        @Override
+        public boolean hasPrevious() { return previous != null; }
+
+        @Override
+        public long previousLong() {
+            if (previous == null) throw new NoSuchElementException();
+            current = previous;
+            previous = backing.lower(current);
+            forward = backing.tailSet(current, true).iterator();
+            movedForward = false;
+            return current;
+        }
+
+        @Override
+        public void remove() {
+            if (current == null) throw new IllegalStateException();
+            if (movedForward) {
+                forward.remove();
+            } else {
+                backing.remove(current);
+                forward = backing.tailSet(current, false).iterator();
+            }
+            if (Objects.equals(previous, current)) previous = backing.lower(current);
+            current = null;
+        }
     }
 
     @Override
@@ -160,17 +227,17 @@ public final class ConcurrentLongSortedSet implements LongSortedSet {
 
     @Override
     public LongSortedSet subSet(long fromElement, long toElement) {
-        return new ConcurrentLongSortedSet(backing.subSet(Math.min(fromElement, toElement), Math.max(fromElement, toElement)));
+        return new ConcurrentLongSortedSet(backing.subSet(fromElement, true, toElement, false));
     }
 
     @Override
     public LongSortedSet headSet(long toElement) {
-        return new ConcurrentLongSortedSet(backing.headSet(toElement));
+        return new ConcurrentLongSortedSet(backing.headSet(toElement, false));
     }
 
     @Override
     public LongSortedSet tailSet(long fromElement) {
-        return new ConcurrentLongSortedSet(backing.tailSet(fromElement));
+        return new ConcurrentLongSortedSet(backing.tailSet(fromElement, true));
     }
 
     @Override

@@ -79,11 +79,10 @@ public final class ConcurrentShortHashSet
     }
 
     public short[] toShortArray() {
-        int size = this.backing.size();
-        short[] result = new short[size];
-        int i = 0;
-        for (Short value : this.backing) {
-            result[i++] = value;
+        Short[] snapshot = this.backing.toArray(new Short[0]);
+        short[] result = new short[snapshot.length];
+        for (int i = 0; i < snapshot.length; i++) {
+            result[i] = snapshot[i];
         }
         return result;
     }

@@ -11,5 +11,7 @@ public interface ModPlatform {
     public boolean isModLoaded(String var1);
 
     public boolean platformUsesRefmap();
+
+    default boolean isSharedEntityMetadataType(Class<?> type) { return false; }
 }
 

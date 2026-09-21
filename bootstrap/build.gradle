@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+}
+
+group = rootProject.group
+version = rootProject.version
+base.archivesName = 'tickweave-collections'
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+repositories { mavenCentral() }
+
+dependencies {
+    compileOnly 'org.ow2.asm:asm-tree:9.5'
+    compileOnly 'org.ow2.asm:asm-analysis:9.5'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.named('jar') {
+    from(rootProject.file('LICENSE'))
+    manifest.attributes('Automatic-Module-Name': 'tickweave.collections')
+}

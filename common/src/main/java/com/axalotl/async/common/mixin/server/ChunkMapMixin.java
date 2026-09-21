@@ -26,10 +26,15 @@ package com.axalotl.async.common.mixin.server;
 import com.axalotl.async.common.parallelised.fastutil.Int2ObjectConcurrentHashMap;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.datafixers.DataFixer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectCollection;
+import it.unimi.dsi.fastutil.objects.ObjectLists;
 import java.nio.file.Path;
+import java.util.Map;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.world.entity.Entity;
@@ -38,6 +43,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -52,6 +58,8 @@ implements ChunkHolder.PlayerProvider {
     private Int2ObjectMap<ChunkMap.TrackedEntity> entityMap;
     @Shadow
     private volatile Long2ObjectLinkedOpenHashMap<ChunkHolder> visibleChunkMap;
+    @Unique
+    private volatile Map.Entry<Long2ObjectLinkedOpenHashMap<ChunkHolder>, ObjectCollection<ChunkHolder>> async$visibleChunks;
 
     public ChunkMapMixin(Path directory, DataFixer dataFixer, boolean dsync) {
         super(directory, dataFixer, dsync);
@@ -60,6 +68,19 @@ implements ChunkHolder.PlayerProvider {
     @Inject(method={"<init>"}, at={@At(value="TAIL")})
     private void replaceConVars(CallbackInfo ci) {
         this.entityMap = new Int2ObjectConcurrentHashMap<ChunkMap.TrackedEntity>();
+    }
+
+    @WrapOperation(method = {"getChunks", "processUnloads"}, at = @At(value = "INVOKE",
+            target = "Lit/unimi/dsi/fastutil/longs/Long2ObjectLinkedOpenHashMap;values()Lit/unimi/dsi/fastutil/objects/ObjectCollection;",
+            remap = false))
+    private ObjectCollection<ChunkHolder> async$visibleChunkValues(Long2ObjectLinkedOpenHashMap<ChunkHolder> map,
+                                                                  Operation<ObjectCollection<ChunkHolder>> original) {
+        var snapshot = this.async$visibleChunks;
+        if (snapshot != null && snapshot.getKey() == map) return snapshot.getValue();
+        // Visible maps are published as clones; only membership is cached, never holder readiness or dirty state.
+        ObjectCollection<ChunkHolder> values = ObjectLists.unmodifiable(new ObjectArrayList<>(original.call(map)));
+        this.async$visibleChunks = Map.entry(map, values);
+        return values;
     }
 
     @WrapMethod(method={"addEntity"})

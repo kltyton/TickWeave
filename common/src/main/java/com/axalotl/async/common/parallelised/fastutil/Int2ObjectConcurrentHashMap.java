@@ -126,8 +126,7 @@ public final class Int2ObjectConcurrentHashMap<V> implements Int2ObjectMap<V> {
     }
 
     public boolean remove(int key, Object value) {
-        V previous = backing.remove(key);
-        return backing.remove(key, previous);
+        return backing.remove(key, value);
     }
 
     public boolean replace(int key, V oldValue, V newValue) {

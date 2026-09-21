@@ -6,6 +6,10 @@ plugins {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(java_version)
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
 minecraft {
     mappings channel: 'official', version: minecraft_version
 
@@ -38,11 +42,6 @@ dependencies {
     // 5. Optional: Harium for navigation integration
     compileOnly files("libs/Harium-1.0.0.jar")
 
-    // 6. GPU: LWJGL Vulkan — must be implementation so classes are available at runtime.
-    // Forge ships LWJGL 3.3.1 core but NOT the Vulkan module.
-    // No separate natives needed — LWJGL Vulkan binds to system's vulkan-1.dll / libvulkan.so.1.
-    implementation "org.lwjgl:lwjgl-vulkan:3.3.1"
-    implementation "org.lwjgl:lwjgl:3.3.1"
 }
 
 // Configuration for sharing source/resources with loader-specific projects

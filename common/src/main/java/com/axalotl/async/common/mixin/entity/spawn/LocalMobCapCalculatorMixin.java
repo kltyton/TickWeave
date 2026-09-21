@@ -15,8 +15,11 @@
  */
 package com.axalotl.async.common.mixin.entity.spawn;
 
-import com.axalotl.async.common.parallelised.ConcurrentCollections;
+import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.entity.task.EntityTasks;
 import com.axalotl.async.common.parallelised.fastutil.Long2ObjectConcurrentHashMap;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +33,6 @@ import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value={LocalMobCapCalculator.class})
 public class LocalMobCapCalculatorMixin {
@@ -47,11 +49,12 @@ public class LocalMobCapCalculatorMixin {
         playersNearChunk = concurrent;
     }
 
-    @Inject(method={"getPlayersNear"}, at={@At(value="RETURN")}, cancellable=true)
-    private void getPlayersNear(ChunkPos pPos, CallbackInfoReturnable<List<ServerPlayer>> cir) {
-        if (cir.getReturnValue() == null) {
-            cir.setReturnValue(List.of());
-        }
+    @WrapMethod(method = "getPlayersNear")
+    private List<ServerPlayer> async$getPlayersNear(ChunkPos pos, Operation<List<ServerPlayer>> original) {
+        if (!ParallelProcessor.isServerExecutionThread()) return original.call(pos);
+        List<ServerPlayer> cached = this.playersNearChunk.get(pos.toLong());
+        if (cached != null) return cached;
+        // A cache miss reads the distance manager and player map, both owned by the server thread.
+        return EntityTasks.onMain(() -> original.call(pos));
     }
 }
-

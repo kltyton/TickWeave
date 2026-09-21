@@ -7,7 +7,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,15 +31,13 @@ public class SensorUtils {
     }
 
     /**
-     * Utility for sorting entities by distance with caching to avoid repeated distance calculations.
+     * Keeps distance keys fixed for one sort while source and target entities move.
      */
     public static <T extends Entity> Comparator<T> distanceComparator(Entity source) {
-        Map<Entity, Double> cache = new HashMap<>();
-        return (a, b) -> {
-            double d1 = cache.computeIfAbsent(a, e -> e.distanceToSqr(source));
-            double d2 = cache.computeIfAbsent(b, e -> e.distanceToSqr(source));
-            return Double.compare(d1, d2);
-        };
+        var origin = source.position();
+        Map<T, Double> distances = new IdentityHashMap<>();
+        return Comparator.comparingDouble(target ->
+                distances.computeIfAbsent(target, entity -> entity.position().distanceToSqr(origin)));
     }
 
     @FunctionalInterface

@@ -44,6 +44,8 @@ repositories {
 }
 
 dependencies {
+    implementation project(':bootstrap')
+    include project(':bootstrap')
     // 1. Core Minecraft & Mappings
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.layered {
@@ -77,9 +79,13 @@ dependencies {
     // 5. Optional: Harium for navigation integration
     compileOnly files("../common/libs/Harium-1.0.0.jar")
 
-    // 6. GPU: Bundle LWJGL Vulkan into the mod JAR
-    include(implementation("org.lwjgl:lwjgl:3.3.1"))
-    include(implementation("org.lwjgl:lwjgl-vulkan:3.3.1"))
 }
 
 layout.buildDirectory.set(file("build"))
+
+tasks.named('remapJar').configure {
+    doFirst {
+        // Remapping into an existing ZIP can retain class entries removed from the input.
+        java.nio.file.Files.deleteIfExists(archiveFile.get().asFile.toPath())
+    }
+}

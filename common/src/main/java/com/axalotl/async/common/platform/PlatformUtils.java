@@ -35,6 +35,10 @@ public class PlatformUtils {
         return MOD_PLATFORM.isModLoaded(modId);
     }
 
+    public static boolean isSharedEntityMetadataType(Class<?> type) {
+        return MOD_PLATFORM.isSharedEntityMetadataType(type);
+    }
+
     public static boolean hasPermission(CommandSourceStack source, String node, int level) {
         return minecraftPlatform.hasPermission(source, node, level);
     }

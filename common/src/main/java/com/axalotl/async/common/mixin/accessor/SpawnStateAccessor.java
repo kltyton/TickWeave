@@ -18,10 +18,14 @@ import net.minecraft.world.level.LocalMobCapCalculator;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.PotentialCalculator;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(value={NaturalSpawner.SpawnState.class})
 public interface SpawnStateAccessor {
+    @Accessor("localMobCapCalculator")
+    LocalMobCapCalculator tickweave$getLocalMobCapCalculator();
+
     @Invoker(value="<init>")
     public static NaturalSpawner.SpawnState create(int spawnableChunkCount, Object2IntOpenHashMap<MobCategory> mobCategoryCounts, PotentialCalculator spawnPotential, LocalMobCapCalculator localMobCapCalculator) {
         throw new AssertionError();

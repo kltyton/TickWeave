@@ -30,3 +30,6 @@
 *.hprof
 
 /fabric/runs/
+
+/bootstrap/build/
+/bootstrap/.gradle/

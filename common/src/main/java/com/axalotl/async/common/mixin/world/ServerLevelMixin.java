@@ -1,6 +1,7 @@
 package com.axalotl.async.common.mixin.world;
 
 import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.entity.task.EntityTasks;
 import com.axalotl.async.common.config.AsyncConfig;
 import com.axalotl.async.common.parallelised.ConcurrentCollections;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
@@ -10,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -52,8 +52,6 @@ public abstract class ServerLevelMixin
     @Shadow
     @Final
     EntityTickList entityTickList;
-    @Unique
-    ConcurrentLinkedQueue<BlockEventData> async$syncedBlockEventQueue;
     @Shadow
     @Final
     @Mutable
@@ -67,10 +65,6 @@ public abstract class ServerLevelMixin
     List<ServerPlayer> players;
     @Unique
     private static final Object lock = new Object();
-    @Unique
-    private final Object async$explosionLock = new Object();
-    @Unique
-    private final Object async$entityAddLock = new Object();
 
     protected ServerLevelMixin(WritableLevelData properties, ResourceKey<Level> registryRef,
             RegistryAccess registryManager, Holder<DimensionType> dimensionEntry, Supplier<ProfilerFiller> profiler,
@@ -86,7 +80,6 @@ public abstract class ServerLevelMixin
     @Inject(method = { "<init>" }, at = { @At(value = "RETURN") })
     private void init(CallbackInfo ci) {
         this.navigatingMobs = ConcurrentCollections.newHashSet();
-        this.async$syncedBlockEventQueue = new ConcurrentLinkedQueue<>();
         this.players = new CopyOnWriteArrayList<>();
     }
 
@@ -136,33 +129,43 @@ public abstract class ServerLevelMixin
     @Redirect(method = {
             "blockEvent" }, at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectLinkedOpenHashSet;add(Ljava/lang/Object;)Z", remap = false))
     private boolean overwriteQueueAdd(ObjectLinkedOpenHashSet<BlockEventData> objectLinkedOpenHashSet, Object object) {
-        return this.async$syncedBlockEventQueue.add((BlockEventData) object);
+        synchronized (objectLinkedOpenHashSet) {
+            return objectLinkedOpenHashSet.add((BlockEventData) object);
+        }
     }
 
     @Redirect(method = {
             "clearBlockEvents" }, at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectLinkedOpenHashSet;removeIf(Ljava/util/function/Predicate;)Z", remap = false))
     private boolean overwriteQueueRemoveIf(ObjectLinkedOpenHashSet<BlockEventData> objectLinkedOpenHashSet,
             Predicate<BlockEventData> filter) {
-        return this.async$syncedBlockEventQueue.removeIf(filter);
+        synchronized (objectLinkedOpenHashSet) {
+            return objectLinkedOpenHashSet.removeIf(filter);
+        }
     }
 
     @Redirect(method = {
             "runBlockEvents" }, at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectLinkedOpenHashSet;isEmpty()Z", remap = false))
     private boolean overwriteEmptyCheck(ObjectLinkedOpenHashSet<BlockEventData> objectLinkedOpenHashSet) {
-        return this.async$syncedBlockEventQueue.isEmpty();
+        synchronized (objectLinkedOpenHashSet) {
+            return objectLinkedOpenHashSet.isEmpty();
+        }
     }
 
     @Redirect(method = {
             "runBlockEvents" }, at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectLinkedOpenHashSet;removeFirst()Ljava/lang/Object;", remap = false))
     private Object overwriteQueueRemoveFirst(ObjectLinkedOpenHashSet<BlockEventData> objectLinkedOpenHashSet) {
-        return this.async$syncedBlockEventQueue.poll();
+        synchronized (objectLinkedOpenHashSet) {
+            return objectLinkedOpenHashSet.removeFirst();
+        }
     }
 
     @Redirect(method = {
             "runBlockEvents" }, at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectLinkedOpenHashSet;addAll(Ljava/util/Collection;)Z", remap = false))
     private boolean overwriteQueueAddAll(ObjectLinkedOpenHashSet<BlockEventData> instance,
             Collection<? extends BlockEventData> c) {
-        return this.async$syncedBlockEventQueue.addAll(c);
+        synchronized (instance) {
+            return instance.addAll(c);
+        }
     }
 
     @Redirect(method = {
@@ -170,25 +173,20 @@ public abstract class ServerLevelMixin
     private void skipSendBlockUpdatedCheck(ServerLevel instance, boolean value) {
     }
 
-    @WrapMethod(method = { "addFreshEntity" })
-    private boolean wrapAddFreshEntity(Entity entity, Operation<Boolean> original) {
-        if (AsyncConfig.disabled.getValue() || !AsyncConfig.enableAsyncSpawn.getValue()) {
+    @WrapMethod(method = "addEntity")
+    private boolean async$addEntity(Entity entity, Operation<Boolean> original) {
+        if (!ParallelProcessor.isServerExecutionThread()) {
             return original.call(entity);
         }
-        // IMPROVED: Per-dimension lock instead of global lock.
-        // Entities spawning in different dimensions no longer block each other.
-        synchronized (this.async$entityAddLock) {
-            return original.call(entity);
-        }
+        // The owner services registration before chunk work while workers await its actual result.
+        return EntityTasks.onMain(() -> original.call(entity));
     }
 
     @WrapMethod(method = "explode(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/damagesource/DamageSource;Lnet/minecraft/world/level/ExplosionDamageCalculator;DDDFZLnet/minecraft/world/level/Level$ExplosionInteraction;)Lnet/minecraft/world/level/Explosion;")
     private Explosion wrapExplode(@Nullable Entity entity, @Nullable DamageSource damageSource,
             @Nullable ExplosionDamageCalculator explosionDamageCalculator, double d, double e, double f, float g,
             boolean bl, Level.ExplosionInteraction explosionInteraction, Operation<Explosion> original) {
-        synchronized (async$explosionLock) {
-            return original.call(entity, damageSource, explosionDamageCalculator, d, e, f, g, bl, explosionInteraction);
-        }
+        return EntityTasks.onMain(() -> original.call(entity, damageSource, explosionDamageCalculator, d, e, f, g, bl, explosionInteraction));
     }
 
     @Inject(method = "tick", at = @At("HEAD"))

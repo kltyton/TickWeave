@@ -2,12 +2,17 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.axalotl.async.forge.mixin",
+  "plugin": "com.axalotl.async.common.mixin.utils.SynchronisePlugin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "tickweave.refmap.json",
   "mixins": [
+    "entity.BlockBreakEventMixin",
     "server.ServerWatchdogMixin",
     "utils.ClassInstanceMultiMapMixin",
-    "utils.UtilMixin"
+    "utils.LazyOptionalMixin",
+    "utils.UtilMixin",
+    "entity.DimensionTransferMixin",
+    "entity.PersistentDataMixin"
   ],
   "client": [],
   "server": [],

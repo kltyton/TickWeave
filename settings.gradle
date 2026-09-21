@@ -49,3 +49,4 @@ rootProject.name = "TickWeave"
 include('common')
 include('fabric')
 include('forge')
+include('bootstrap')

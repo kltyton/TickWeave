@@ -48,14 +48,16 @@ public abstract class AnimalMixin
             return;
         }
         AnimalMixin otherMixin = (AnimalMixin) (Object) other;
-        if (this.async$breedingFlag.compareAndSet(false, true)
-                && otherMixin.async$breedingFlag.compareAndSet(false, true)) {
+        if (!this.async$breedingFlag.compareAndSet(false, true)) return;
+        try {
+            if (!otherMixin.async$breedingFlag.compareAndSet(false, true)) return;
             try {
                 original.call(new Object[] { world, other });
             } finally {
-                this.async$breedingFlag.set(false);
                 otherMixin.async$breedingFlag.set(false);
             }
+        } finally {
+            this.async$breedingFlag.set(false);
         }
     }
 
@@ -68,14 +70,16 @@ public abstract class AnimalMixin
             return;
         }
         AnimalMixin otherMixin = (AnimalMixin) (Object) other;
-        if (this.async$breedingBabyFlag.compareAndSet(false, true)
-                && otherMixin.async$breedingBabyFlag.compareAndSet(false, true)) {
+        if (!this.async$breedingBabyFlag.compareAndSet(false, true)) return;
+        try {
+            if (!otherMixin.async$breedingBabyFlag.compareAndSet(false, true)) return;
             try {
                 original.call(new Object[] { world, other, baby });
             } finally {
-                this.async$breedingBabyFlag.set(false);
                 otherMixin.async$breedingBabyFlag.set(false);
             }
+        } finally {
+            this.async$breedingBabyFlag.set(false);
         }
     }
 }

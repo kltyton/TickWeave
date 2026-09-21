@@ -15,11 +15,13 @@
  */
 package com.axalotl.async.common.mixin.entity;
 
+import com.axalotl.async.common.entity.task.EntityTasks;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -28,18 +30,19 @@ import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(value={Mob.class})
 public class MobMixin {
-    @Unique
-    private static final Object async$lock = new Object();
+
+    /** Target changes fire synchronous events that can mutate the receiving mob. */
+    @WrapMethod(method = "setTarget")
+    private void tickweave$target(@Nullable LivingEntity target, Operation<Void> original) {
+        EntityTasks.call((Mob) (Object) this, target, () -> original.call(target));
+    }
 
     /*
      * WARNING - Removed try catching itself - possible behaviour change.
      */
     @WrapMethod(method={"equipItemIfPossible"})
     private ItemStack tryEquip(ItemStack stack, Operation<ItemStack> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (ItemStack)original.call(new Object[]{stack});
-        }
+        return EntityTasks.call((Mob) (Object) this, () -> original.call(stack));
     }
 
     /*
@@ -47,10 +50,8 @@ public class MobMixin {
      */
     @WrapMethod(method={"pickUpItem"})
     private void pickUpItem(ItemEntity entity, Operation<Void> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            original.call(new Object[]{entity});
-        }
+        EntityTasks.call((Mob) (Object) this, entity, () ->
+                EntityTasks.onMain((Mob) (Object) this, () -> original.call(entity)));
     }
 
     /*
@@ -58,10 +59,7 @@ public class MobMixin {
      */
     @WrapMethod(method={"setItemSlotAndDropWhenKilled"})
     private void equipLootStack(EquipmentSlot slot, ItemStack stack, Operation<Void> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            original.call(new Object[]{slot, stack});
-        }
+        EntityTasks.execute((Mob) (Object) this, () -> original.call(slot, stack));
     }
 
     /*
@@ -70,13 +68,7 @@ public class MobMixin {
     @WrapMethod(method={"convertTo(Lnet/minecraft/world/entity/EntityType;Z)Lnet/minecraft/world/entity/Mob;"})
     @Nullable
     private <T extends Mob> T convertTo(EntityType<T> entityType, boolean mysteryBool, Operation<T> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            if (((Mob)(Object)this).isRemoved()) {
-                return null;
-            }
-            return (T)((Mob)original.call(new Object[]{entityType, mysteryBool}));
-        }
+        return EntityTasks.onMain((Mob) (Object) this, () -> ((Mob) (Object) this).isRemoved() ? null : original.call(entityType, mysteryBool));
     }
 }
 

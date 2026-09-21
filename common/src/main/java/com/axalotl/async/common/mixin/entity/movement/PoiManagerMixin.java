@@ -1,119 +1,157 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.core.Holder
- *  net.minecraft.core.RegistryAccess$RegistryEntry
- *  net.minecraft.util.RandomSource
- *  net.minecraft.world.entity.ai.village.poi.PoiManager
- *  net.minecraft.world.entity.ai.village.poi.PoiManager$Occupancy
- *  net.minecraft.world.entity.ai.village.poi.PoiRecord
- *  net.minecraft.world.entity.ai.village.poi.PoiType
- *  net.minecraft.world.level.ChunkPos
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.entity.movement;
 
+import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.entity.task.EntityTasks;
+import com.axalotl.async.common.entity.task.OwnerStream;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.mojang.datafixers.util.Pair;
 import java.util.Optional;
+import java.util.function.BiPredicate;
+import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.SectionPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiRecord;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
-@Mixin(value={PoiManager.class})
-public class PoiManagerMixin {
+@Mixin(PoiManager.class)
+public abstract class PoiManagerMixin {
     @Unique
-    private static final Object async$lock = new Object();
-
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"getInSquare"})
-    private Stream<PoiRecord> getInSquare(Predicate<RegistryAccess.RegistryEntry<PoiType>> typePredicate, BlockPos pos, int radius, PoiManager.Occupancy occupationStatus, Operation<Stream<PoiRecord>> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Stream)original.call(new Object[]{typePredicate, pos, radius, occupationStatus});
-        }
+    private static <T> Stream<T> tickweave$ownedStream(Supplier<Stream<T>> action) {
+        var server = ParallelProcessor.getServer();
+        if (server == null || server.isSameThread()) return action.get();
+        return OwnerStream.wrap(EntityTasks.onMain(action));
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"getInRange"})
-    private Stream<PoiRecord> getInRange(Predicate<RegistryAccess.RegistryEntry<PoiType>> typePredicate, BlockPos pos, int radius, PoiManager.Occupancy occupationStatus, Operation<Stream<PoiRecord>> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Stream)original.call(new Object[]{typePredicate, pos, radius, occupationStatus});
-        }
+    @WrapMethod(method = {"getInSquare", "getInRange"})
+    private Stream<PoiRecord> tickweave$getInSquare(Predicate<Holder<PoiType>> type, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Stream<PoiRecord>> original) {
+        return tickweave$ownedStream(() -> original.call(type, pos, radius, occupancy));
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"getInChunk"})
-    private Stream<PoiRecord> getInChunk(Predicate<RegistryAccess.RegistryEntry<PoiType>> typePredicate, ChunkPos chunkPos, PoiManager.Occupancy occupationStatus, Operation<Stream<PoiRecord>> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Stream)original.call(new Object[]{typePredicate, chunkPos, occupationStatus});
-        }
+    @WrapMethod(method = {"getInChunk"})
+    private Stream<PoiRecord> tickweave$getInChunk(Predicate<Holder<PoiType>> type, ChunkPos pos, PoiManager.Occupancy occupancy, Operation<Stream<PoiRecord>> original) {
+        return tickweave$ownedStream(() -> original.call(type, pos, occupancy));
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"getCountInRange"})
-    private long getInChunk(Predicate<RegistryAccess.RegistryEntry<PoiType>> typePredicate, BlockPos pos, int radius, PoiManager.Occupancy occupationStatus, Operation<Long> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Long)original.call(new Object[]{typePredicate, pos, radius, occupationStatus});
-        }
+    @WrapMethod(method = {"getCountInRange"})
+    private long tickweave$getCountInRange(Predicate<Holder<PoiType>> type, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Long> original) {
+        return EntityTasks.onMain(() -> original.call(type, pos, radius, occupancy));
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"findClosest(Ljava/util/function/Predicate;Lnet/minecraft/core/BlockPos;ILnet/minecraft/world/entity/ai/village/poi/PoiManager$Occupancy;)Ljava/util/Optional;"})
-    private Optional<BlockPos> getNearestPosition(Predicate<RegistryAccess.RegistryEntry<PoiType>> typePredicate, BlockPos pos, int radius, PoiManager.Occupancy occupationStatus, Operation<Optional<BlockPos>> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Optional)original.call(new Object[]{typePredicate, pos, radius, occupationStatus});
-        }
+    @WrapMethod(method = {"findAll"})
+    private Stream<BlockPos> tickweave$findAll(Predicate<Holder<PoiType>> type, Predicate<BlockPos> positions, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Stream<BlockPos>> original) {
+        return tickweave$ownedStream(() -> original.call(type, positions, pos, radius, occupancy));
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"findClosest(Ljava/util/function/Predicate;Ljava/util/function/Predicate;Lnet/minecraft/core/BlockPos;ILnet/minecraft/world/entity/ai/village/poi/PoiManager$Occupancy;)Ljava/util/Optional;"})
-    private Optional<BlockPos> getNearestPosition(Predicate<RegistryAccess.RegistryEntry<PoiType>> typePredicate, Predicate<BlockPos> posPredicate, BlockPos pos, int radius, PoiManager.Occupancy occupationStatus, Operation<Optional<BlockPos>> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Optional)original.call(new Object[]{typePredicate, posPredicate, pos, radius, occupationStatus});
-        }
+    @WrapMethod(method = {"findAllWithType", "findAllClosestFirstWithType"})
+    private Stream<Pair<Holder<PoiType>, BlockPos>> tickweave$findAllWithType(Predicate<Holder<PoiType>> type, Predicate<BlockPos> positions, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Stream<Pair<Holder<PoiType>, BlockPos>>> original) {
+        return tickweave$ownedStream(() -> original.call(type, positions, pos, radius, occupancy));
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    @WrapMethod(method={"getRandom(Ljava/util/function/Predicate;Ljava/util/function/Predicate;Lnet/minecraft/world/entity/ai/village/poi/PoiManager$Occupancy;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;)Ljava/util/Optional;"})
-    private Optional<BlockPos> getNearestPosition(Predicate<Holder<PoiType>> typePredicate, Predicate<BlockPos> positionPredicate, PoiManager.Occupancy occupationStatus, BlockPos pos, int radius, RandomSource random, Operation<Optional<BlockPos>> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            return (Optional)original.call(new Object[]{typePredicate, positionPredicate, occupationStatus, pos, radius, random});
-        }
+    @WrapMethod(method = {"find"})
+    private Optional<BlockPos> tickweave$find(Predicate<Holder<PoiType>> type, Predicate<BlockPos> positions, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Optional<BlockPos>> original) {
+        return EntityTasks.onMain(() -> original.call(type, positions, pos, radius, occupancy));
+    }
+
+    @WrapMethod(method = {"findClosest(Ljava/util/function/Predicate;Lnet/minecraft/core/BlockPos;ILnet/minecraft/world/entity/ai/village/poi/PoiManager$Occupancy;)Ljava/util/Optional;"})
+    private Optional<BlockPos> tickweave$findClosest(Predicate<Holder<PoiType>> type, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Optional<BlockPos>> original) {
+        return EntityTasks.onMain(() -> original.call(type, pos, radius, occupancy));
+    }
+
+    @WrapMethod(method = {"findClosest(Ljava/util/function/Predicate;Ljava/util/function/Predicate;Lnet/minecraft/core/BlockPos;ILnet/minecraft/world/entity/ai/village/poi/PoiManager$Occupancy;)Ljava/util/Optional;"})
+    private Optional<BlockPos> tickweave$findClosest(Predicate<Holder<PoiType>> type, Predicate<BlockPos> positions, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Optional<BlockPos>> original) {
+        return EntityTasks.onMain(() -> original.call(type, positions, pos, radius, occupancy));
+    }
+
+    @WrapMethod(method = {"findClosestWithType"})
+    private Optional<Pair<Holder<PoiType>, BlockPos>> tickweave$findClosestWithType(Predicate<Holder<PoiType>> type, BlockPos pos, int radius, PoiManager.Occupancy occupancy, Operation<Optional<Pair<Holder<PoiType>, BlockPos>>> original) {
+        return EntityTasks.onMain(() -> original.call(type, pos, radius, occupancy));
+    }
+
+    @WrapMethod(method = {"take"})
+    private Optional<BlockPos> tickweave$take(Predicate<Holder<PoiType>> type, BiPredicate<Holder<PoiType>, BlockPos> positions, BlockPos pos, int radius, Operation<Optional<BlockPos>> original) {
+        return EntityTasks.onMain(() -> original.call(type, positions, pos, radius));
+    }
+
+    @WrapMethod(method = {"getRandom"})
+    private Optional<BlockPos> tickweave$getRandom(Predicate<Holder<PoiType>> type, Predicate<BlockPos> positions, PoiManager.Occupancy occupancy, BlockPos pos, int radius, RandomSource random, Operation<Optional<BlockPos>> original) {
+        return EntityTasks.onMain(() -> original.call(type, positions, occupancy, pos, radius, random));
+    }
+
+    @WrapMethod(method = {"add"})
+    private void tickweave$add(BlockPos pos, Holder<PoiType> type, Operation<Void> original) {
+        EntityTasks.onMain(() -> { original.call(pos, type); return null; });
+    }
+
+    @WrapMethod(method = {"remove"})
+    private void tickweave$remove(BlockPos pos, Operation<Void> original) {
+        EntityTasks.onMain(() -> { original.call(pos); return null; });
+    }
+
+    @WrapMethod(method = {"release"})
+    private boolean tickweave$release(BlockPos pos, Operation<Boolean> original) {
+        return EntityTasks.onMain(() -> original.call(pos));
+    }
+
+    @WrapMethod(method = {"exists"})
+    private boolean tickweave$exists(BlockPos pos, Predicate<Holder<PoiType>> type, Operation<Boolean> original) {
+        return EntityTasks.onMain(() -> original.call(pos, type));
+    }
+
+    @WrapMethod(method = {"existsAtPosition"})
+    private boolean tickweave$existsAtPosition(ResourceKey<PoiType> type, BlockPos pos, Operation<Boolean> original) {
+        return EntityTasks.onMain(() -> original.call(type, pos));
+    }
+
+    @WrapMethod(method = {"getType"})
+    private Optional<Holder<PoiType>> tickweave$getType(BlockPos pos, Operation<Optional<Holder<PoiType>>> original) {
+        return EntityTasks.onMain(() -> original.call(pos));
+    }
+
+    @WrapMethod(method = {"getFreeTickets"})
+    private int tickweave$getFreeTickets(BlockPos pos, Operation<Integer> original) {
+        return EntityTasks.onMain(() -> original.call(pos));
+    }
+
+    @WrapMethod(method = {"sectionsToVillage"})
+    private int tickweave$sectionsToVillage(SectionPos pos, Operation<Integer> original) {
+        return EntityTasks.onMain(() -> original.call(pos));
+    }
+
+    @WrapMethod(method = {"isVillageCenter"})
+    private boolean tickweave$isVillageCenter(long section, Operation<Boolean> original) {
+        return EntityTasks.onMain(() -> original.call(section));
+    }
+
+    @WrapMethod(method = {"tick"})
+    private void tickweave$tick(BooleanSupplier aheadOfTime, Operation<Void> original) {
+        EntityTasks.onMain(() -> { original.call(aheadOfTime); return null; });
+    }
+
+    @WrapMethod(method = {"setDirty", "onSectionLoad"})
+    private void tickweave$setDirty(long section, Operation<Void> original) {
+        EntityTasks.onMain(() -> { original.call(section); return null; });
+    }
+
+    @WrapMethod(method = {"checkConsistencyWithBlocks"})
+    private void tickweave$checkConsistencyWithBlocks(SectionPos pos, LevelChunkSection section, Operation<Void> original) {
+        EntityTasks.onMain(() -> { original.call(pos, section); return null; });
+    }
+
+    @WrapMethod(method = {"ensureLoadedAndValid"})
+    private void tickweave$ensureLoadedAndValid(LevelReader level, BlockPos pos, int radius, Operation<Void> original) {
+        EntityTasks.onMain(() -> { original.call(level, pos, radius); return null; });
     }
 }
-

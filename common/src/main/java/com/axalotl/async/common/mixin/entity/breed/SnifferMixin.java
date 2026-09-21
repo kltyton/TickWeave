@@ -44,15 +44,17 @@ extends Animal {
             return;
         }
         SnifferMixin otherMixin = (SnifferMixin)other;
-        if (this.async$breedingFlag.compareAndSet(false, true) && otherMixin.async$breedingFlag.compareAndSet(false, true)) {
+        if (!this.async$breedingFlag.compareAndSet(false, true)) return;
+        try {
+            if (!otherMixin.async$breedingFlag.compareAndSet(false, true)) return;
             try {
                 original.call(new Object[]{world, other});
             }
             finally {
-                this.async$breedingFlag.set(false);
                 otherMixin.async$breedingFlag.set(false);
             }
+        } finally {
+            this.async$breedingFlag.set(false);
         }
     }
 }
-

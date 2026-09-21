@@ -10,7 +10,7 @@
  */
 package com.axalotl.async.common.mixin.entity;
 
-import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.entity.task.EntityTasks;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.world.entity.Entity;
@@ -24,10 +24,7 @@ public class ProjectileEntityMixin {
      */
     @WrapMethod(method={"shootFromRotation"})
     private void shootFromRotation(Entity shooter, float x, float y, float z, float velocity, float inaccuracy, Operation<Void> original) {
-        Object object = ParallelProcessor.getEntityAddLock();
-        synchronized (object) {
-            original.call(new Object[]{shooter, Float.valueOf(x), Float.valueOf(y), Float.valueOf(z), Float.valueOf(velocity), Float.valueOf(inaccuracy)});
-        }
+        EntityTasks.execute((Entity) (Object) this, () -> original.call(shooter, x, y, z, velocity, inaccuracy));
     }
 }
 

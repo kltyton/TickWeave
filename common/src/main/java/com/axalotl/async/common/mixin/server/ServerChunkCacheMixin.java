@@ -2,7 +2,12 @@ package com.axalotl.async.common.mixin.server;
 
 import com.axalotl.async.common.AsyncRandomTicks;
 import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.entity.task.EntityTasks;
+import com.axalotl.async.common.entity.task.CooperativeTask;
+import com.axalotl.async.common.chunk.ChunkRequest;
 import com.axalotl.async.common.config.AsyncConfig;
+import com.axalotl.async.common.mixin.accessor.LocalMobCapCalculatorAccessor;
+import com.axalotl.async.common.mixin.accessor.SpawnStateAccessor;
 import com.axalotl.async.common.utils.LastChunkCache;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -10,6 +15,8 @@ import com.mojang.datafixers.util.Either;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerChunkCache;
@@ -43,6 +50,8 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
     @Unique private final ThreadLocal<LastChunkCache> async$lastChunk = ThreadLocal.withInitial(LastChunkCache::new);
     @Unique private final List<LevelChunk> async$chunksToTick = new ArrayList<>();
     @Unique private final List<Runnable> async$spawnTasks = new ArrayList<>();
+    @Unique private final ConcurrentMap<ChunkRequest, CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>>>
+            tickweave$pendingChunks = new ConcurrentHashMap<>();
 
     @Shadow @Nullable protected abstract ChunkHolder getVisibleChunkIfPresent(long position);
     @Shadow protected abstract CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>>
@@ -62,9 +71,13 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
         }
         ChunkAccess chunk = async$readyChunk(x, z, status);
         if (chunk == null) {
-            Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> result = CompletableFuture
-                    .supplyAsync(() -> getChunkFutureMainThread(x, z, status, create), mainThreadProcessor)
-                    .thenCompose(future -> future).join();
+            ChunkRequest request = new ChunkRequest(position, status, create);
+            CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>> pending =
+                    tickweave$pendingChunks.compute(request, (ignored, current) ->
+                            current != null && !current.isDone() ? current : CooperativeTask
+                            .composeAsync(() -> getChunkFutureMainThread(x, z, status, create), mainThreadProcessor));
+            pending.whenComplete((result, failure) -> tickweave$pendingChunks.remove(request, pending));
+            Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> result = EntityTasks.await(pending);
             chunk = result.left().orElse(null);
             if (chunk instanceof ImposterProtoChunk imposter) chunk = imposter.getWrapped();
             if (chunk == null && create) throw new IllegalStateException("Chunk unavailable at " + position + ": " + result);
@@ -115,6 +128,8 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
     private void async$collectSpawn(ServerLevel world, LevelChunk chunk, NaturalSpawner.SpawnState state,
                                    boolean animals, boolean monsters, boolean rare) {
         if (!AsyncConfig.disabled.getValue() && AsyncConfig.enableAsyncSpawn.getValue()) {
+            var calculator = ((SpawnStateAccessor) state).tickweave$getLocalMobCapCalculator();
+            ((LocalMobCapCalculatorAccessor) calculator).tickweave$getPlayersNear(chunk.getPos());
             async$spawnTasks.add(() -> NaturalSpawner.spawnForChunk(world, chunk, state, animals, monsters, rare));
         } else {
             NaturalSpawner.spawnForChunk(world, chunk, state, animals, monsters, rare);

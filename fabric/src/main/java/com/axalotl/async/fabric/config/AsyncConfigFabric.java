@@ -48,7 +48,7 @@ public class AsyncConfigFabric {
                 "Maximum worker threads. -1 = automatic platform-aware selection.");
 
         CONFIG.set("synchronizedEntities", new ArrayList<>(synchronizedEntities.getValue()));
-        CONFIG.setComment("synchronizedEntities", "Entity IDs or namespace:* patterns that must tick on the server thread.");
+        CONFIG.setComment("synchronizedEntities", "Legacy entries retained for migration; inactive with all-entity worker scheduling.");
 
         CONFIG.set("enableAsyncSpawn", enableAsyncSpawn.getValue());
         CONFIG.setComment("enableAsyncSpawn",
@@ -59,9 +59,9 @@ public class AsyncConfigFabric {
                 "Experimental! Enables async random ticks.");
 
         CONFIG.set("enableAffinityRouting", enableAffinityRouting.getValue());
-        CONFIG.setComment("enableAffinityRouting", "Group nearby entities into spatial batches for CPU cache locality.");
+        CONFIG.setComment("enableAffinityRouting", "Legacy setting retained for migration; entity ownership now determines scheduling.");
         CONFIG.set("enableCircuitBreaker", enableCircuitBreaker.getValue());
-        CONFIG.setComment("enableCircuitBreaker", "Move repeatedly failing entity types back to synchronous ticking.");
+        CONFIG.setComment("enableCircuitBreaker", "Collect entity failure diagnostics; does not change worker eligibility.");
         CONFIG.set("entitiesPerWorker", entitiesPerWorker.getValue());
         CONFIG.setComment("entitiesPerWorker", "Maximum entities per task; actual batch size adapts to measured cost. Default: 25.");
         CONFIG.set("staleTaskTimeoutMs", staleTaskTimeoutMs.getValue());

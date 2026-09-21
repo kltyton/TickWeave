@@ -33,9 +33,8 @@ public class AsyncConfigForge {
                                 .defineInRange("paraMax", maxThreads.getValue(), -1, Integer.MAX_VALUE);
 
                 synchronizedEntitiesLocal = BUILDER.comment("""
-                                List of entity IDs or namespaces (*):
-                                  - 'minecraft:zombie' = specific entity
-                                  - 'minecraft:*'      = all entities in namespace""")
+                                Legacy entries retained for migration.
+                                Inactive with all-entity worker scheduling.""")
                                 .defineListAllowEmpty(
                                                 "synchronizedEntities",
                                                 () -> new ArrayList<>(synchronizedEntities.getValue()),
@@ -49,15 +48,13 @@ public class AsyncConfigForge {
                                 .define("enableAsyncRandomTicks", enableAsyncRandomTicks.getValue());
 
                 enableAffinityRoutingLocal = BUILDER.comment("""
-                                Enable affinity-based entity routing.
-                                Sorts nearby entities into spatial batches for better CPU cache locality.
-                                Workers and the server share the pending batches. Recommended: true.""")
+                                Legacy setting retained for migration.
+                                Entity ownership now determines scheduling.""")
                                 .define("enableAffinityRouting", enableAffinityRouting.getValue());
 
                 enableCircuitBreakerLocal = BUILDER.comment("""
-                                Enable circuit breaker for entity tick crash isolation.
-                                When an entity type crashes repeatedly during async tick, it is automatically
-                                moved to synchronous ticking until it stabilizes. Prevents cascade failures.""")
+                                Collect entity failure diagnostics.
+                                Does not change worker eligibility.""")
                                 .define("enableCircuitBreaker", enableCircuitBreaker.getValue());
 
                 entitiesPerWorkerLocal = BUILDER.comment("""
