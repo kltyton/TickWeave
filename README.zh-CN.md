@@ -12,8 +12,8 @@ TickWeave 将 Minecraft 的实体 tick 分配给多个 CPU 工作线程，旨在
 
 | 加载器 | 运行环境 | 发行文件 |
 | --- | --- | --- |
-| Forge | Forge 47.x，构建版本为 47.4.16 | `tickweave-forge-1.20.1-2.1.11-all.jar` |
-| Fabric | Fabric Loader 0.19.3+，以及对应 1.20.1 的 Fabric API | `tickweave-fabric-1.20.1-2.1.11.jar` |
+| Forge | Forge 47.x，构建版本为 47.4.16 | `tickweave-forge-1.20.1-2.1.12-all.jar` |
+| Fabric | Fabric Loader 0.19.3+，以及对应 1.20.1 的 Fabric API | `tickweave-fabric-1.20.1-2.1.12.jar` |
 
 将 JAR 放入 `mods`。专用服务器的玩家客户端不必安装；单人游戏需要在客户端安装。更换 tick 处理模组前备份存档。安装时移除旧版 TickWeave、HariMultiThread 或 Async，不要同时运行这些实现。
 
@@ -68,7 +68,7 @@ TickWeave 将 Minecraft 的实体 tick 分配给多个 CPU 工作线程，旨在
 
 不要与 Moonrise 同时使用。两种加载器的实体注册都在服务器线程执行，也适用于 Cupboard 对注册线程的检查；Cupboard 的注入保持启用。Clickable Advancements 和 Biome Music 分别提供进度交互与音乐功能，TickWeave 不替代这些功能，也不注册 MixinSquared 取消器。Carpet 的 `lagFreeSpawning` 规则与并行刷怪冲突，使用该规则时请关闭并行刷怪。兼容补丁只在对应模组安装时加载。2.1.1 更新了 Forge SophisticatedCore 的 `SlotValueMap` 兼容处理，对应 Core 1.3.21.1676 / Backpacks 3.24.35.1675。
 
-评估新构建时使用整合包和世界副本。当前调度器不会因修改 `synchronizedEntities` 而绕过出错的回调。通过 [GitHub Issues](https://github.com/kltyton/TickWeave/issues) 提交加载器、模组版本、`latest.log`、崩溃报告和复现步骤。
+**TickWeave 仍处于测试阶段，可能与许多模组不兼容，导致崩溃或世界行为异常。** 评估新构建时请使用整合包和世界副本。当前调度器不会因修改 `synchronizedEntities` 而绕过出错的回调。通过 [GitHub Issues](https://github.com/kltyton/TickWeave/issues) 提交加载器、模组版本、`latest.log`、崩溃报告和复现步骤。
 
 ## 构建
 
@@ -86,4 +86,4 @@ Windows 使用 `gradlew.bat`。Forge 发行包位于 `forge/build/libs`，选择
 
 本项目衍生自 HariMultiThread 和 Async。感谢 HariMT、Axalotl、Alchemy、Bliss、FurryMileon、Grider、jediminer543 的上游工作，以及 PaperMC / Folia 的线程所有权设计参考。TickWeave 不是 Folia 服务器，也不代表上游团队背书。
 
-采用 [GPL-3.0](LICENSE)。详见[第三方来源说明](THIRD_PARTY_NOTICES.md)和[更新记录](CHANGELOG.md)。
+采用 [GPL-3.0](LICENSE)。详见[第三方来源说明](THIRD_PARTY_NOTICES.md)。

@@ -12,8 +12,8 @@ Use Java 17 and choose the file matching your loader:
 
 | Loader | Runtime | Release file |
 | --- | --- | --- |
-| Forge | Forge 47.x; built against 47.4.16 | `tickweave-forge-1.20.1-2.1.11-all.jar` |
-| Fabric | Fabric Loader 0.19.3+ and Fabric API for 1.20.1 | `tickweave-fabric-1.20.1-2.1.11.jar` |
+| Forge | Forge 47.x; built against 47.4.16 | `tickweave-forge-1.20.1-2.1.12-all.jar` |
+| Fabric | Fabric Loader 0.19.3+ and Fabric API for 1.20.1 | `tickweave-fabric-1.20.1-2.1.12.jar` |
 
 Place the JAR in `mods`. Dedicated-server players do not need TickWeave on their clients. For single-player, install it on the client. Back up your world before changing tick-processing mods. Remove older TickWeave, HariMultiThread or Async JARs before installing; these implementations must not run together.
 
@@ -68,7 +68,7 @@ Administrative commands:
 
 Do not combine with Moonrise. Entity registration uses the server thread on both loaders, including when Cupboard checks its thread ownership; Cupboard's hooks remain enabled. Clickable Advancements and Biome Music provide separate advancement and music features that TickWeave does not replace. TickWeave does not register a MixinSquared canceller. Carpet's `lagFreeSpawning` rule conflicts with parallel spawning; disable parallel spawning when using that rule. Existing compatibility hooks are conditional on the corresponding mods being installed. Version 2.1.1 updates the Forge SophisticatedCore hooks for `SlotValueMap` (Core 1.3.21.1676 / Backpacks 3.24.35.1675).
 
-Use a copy of your modpack and world when evaluating a new build. Changing `synchronizedEntities` does not bypass a failing callback in the current scheduler. Report the loader, mod versions, `latest.log`, crash report and reproduction steps through [GitHub Issues](https://github.com/kltyton/TickWeave/issues).
+**TickWeave is still in testing. Many mod incompatibilities may remain, including crashes or incorrect world behavior.** Use a copy of your modpack and world when evaluating a new build. Changing `synchronizedEntities` does not bypass a failing callback in the current scheduler. Report the loader, mod versions, `latest.log`, crash report and reproduction steps through [GitHub Issues](https://github.com/kltyton/TickWeave/issues).
 
 ## Building
 
@@ -86,4 +86,4 @@ On Windows use `gradlew.bat`. Release files are in `forge/build/libs` (use the `
 
 Derived from HariMultiThread and Async. Thanks to HariMT, Axalotl, Alchemy, Bliss, FurryMileon, Grider and jediminer543 for their upstream work; PaperMC / Folia informed thread-ownership design research. TickWeave is not a Folia server and does not imply upstream endorsement.
 
-Licensed under [GPL-3.0](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) and the [changelog](CHANGELOG.md).
+Licensed under [GPL-3.0](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md).
