@@ -12,7 +12,9 @@
     "utils.LazyOptionalMixin",
     "utils.UtilMixin",
     "entity.DimensionTransferMixin",
-    "entity.PersistentDataMixin"
+    "entity.PersistentDataMixin",
+    "entity.WalkNodeEvaluatorMixin",
+    "entity.NodeEvaluatorMixin"
   ],
   "client": [],
   "server": [],

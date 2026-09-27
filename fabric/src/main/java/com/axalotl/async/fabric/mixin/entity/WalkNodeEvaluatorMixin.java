@@ -1,4 +1,4 @@
-package com.axalotl.async.common.mixin.entity.movement;
+package com.axalotl.async.fabric.mixin.entity;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -22,7 +22,7 @@ public abstract class WalkNodeEvaluatorMixin extends NodeEvaluator {
      * @reason Avoid capturing the evaluator and coordinates on native path-type cache hits.
      */
     @Overwrite
-    protected BlockPathTypes getCachedBlockType(Mob mob, int x, int y, int z) {
+    public BlockPathTypes getCachedBlockType(Mob mob, int x, int y, int z) {
         long key = BlockPos.asLong(x, y, z);
         if (pathTypesByPosCache.getClass() == Long2ObjectOpenHashMap.class) {
             BlockPathTypes existing = pathTypesByPosCache.get(key);

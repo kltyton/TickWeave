@@ -1,4 +1,4 @@
-package com.axalotl.async.common.mixin.entity.movement;
+package com.axalotl.async.fabric.mixin.entity;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -19,7 +19,7 @@ public abstract class NodeEvaluatorMixin {
      * @reason Avoid capturing coordinates when the native node cache already contains the key.
      */
     @Overwrite
-    protected Node getNode(int x, int y, int z) {
+    public Node getNode(int x, int y, int z) {
         int key = Node.createHash(x, y, z);
         if (nodes.getClass() == Int2ObjectOpenHashMap.class) {
             Node existing = nodes.get(key);
