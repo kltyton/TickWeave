@@ -103,7 +103,7 @@ public final class DeferredCallbackExtension implements IExtension {
                 && method.desc.equals(call.desc)).findFirst().orElse(null);
         if (handler == null || (handler.access & Opcodes.ACC_PRIVATE) == 0
                 || (handler.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE | Opcodes.ACC_SYNCHRONIZED)) != 0
-                || !handler.tryCatchBlocks.isEmpty() || !hasMergedAnnotation(handler)
+                || (handler.tryCatchBlocks != null && !handler.tryCatchBlocks.isEmpty()) || !hasMergedAnnotation(handler)
                 || !Type.getReturnType(handler.desc).equals(Type.VOID_TYPE)) return null;
         if (BytecodeInstructions.opcodes(handler).isEmpty()) return null;
         Type[] parameters = Type.getArgumentTypes(handler.desc);
@@ -232,10 +232,12 @@ public final class DeferredCallbackExtension implements IExtension {
                 targets.addAll(selection.labels);
             }
         }
-        for (var handler : method.tryCatchBlocks) {
-            targets.add(handler.start);
-            targets.add(handler.end);
-            targets.add(handler.handler);
+        if (method.tryCatchBlocks != null) {
+            for (var handler : method.tryCatchBlocks) {
+                targets.add(handler.start);
+                targets.add(handler.end);
+                targets.add(handler.handler);
+            }
         }
         return targets;
     }
