@@ -12,8 +12,8 @@ TickWeave 将 Minecraft 的实体 tick 分配给多个 CPU 工作线程，旨在
 
 | 加载器 | 运行环境 | 发行文件 |
 | --- | --- | --- |
-| Forge | Forge 47.x，构建版本为 47.4.16 | `tickweave-forge-1.20.1-2.1.12-all.jar` |
-| Fabric | Fabric Loader 0.19.3+，以及对应 1.20.1 的 Fabric API | `tickweave-fabric-1.20.1-2.1.12.jar` |
+| Forge | Forge 47.x，构建版本为 47.4.16 | `tickweave-forge-1.20.1-2.1.13-all.jar` |
+| Fabric | Fabric Loader 0.19.3+，以及对应 1.20.1 的 Fabric API | `tickweave-fabric-1.20.1-2.1.13.jar` |
 
 将 JAR 放入 `mods`。专用服务器的玩家客户端不必安装；单人游戏需要在客户端安装。更换 tick 处理模组前备份存档。安装时移除旧版 TickWeave、HariMultiThread 或 Async，不要同时运行这些实现。
 

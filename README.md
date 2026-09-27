@@ -12,8 +12,8 @@ Use Java 17 and choose the file matching your loader:
 
 | Loader | Runtime | Release file |
 | --- | --- | --- |
-| Forge | Forge 47.x; built against 47.4.16 | `tickweave-forge-1.20.1-2.1.12-all.jar` |
-| Fabric | Fabric Loader 0.19.3+ and Fabric API for 1.20.1 | `tickweave-fabric-1.20.1-2.1.12.jar` |
+| Forge | Forge 47.x; built against 47.4.16 | `tickweave-forge-1.20.1-2.1.13-all.jar` |
+| Fabric | Fabric Loader 0.19.3+ and Fabric API for 1.20.1 | `tickweave-fabric-1.20.1-2.1.13.jar` |
 
 Place the JAR in `mods`. Dedicated-server players do not need TickWeave on their clients. For single-player, install it on the client. Back up your world before changing tick-processing mods. Remove older TickWeave, HariMultiThread or Async JARs before installing; these implementations must not run together.
 
