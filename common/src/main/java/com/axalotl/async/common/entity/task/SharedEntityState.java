@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.axalotl.async.common.platform.PlatformUtils;
 import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.bootstrap.SharedWeakMapExtension;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -51,6 +52,7 @@ import net.minecraft.world.level.block.state.StateHolder;
 import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.LogManager;
+import org.objectweb.asm.tree.FieldNode;
 
 /** Keeps direct shared mutable state and nested NBT aliases under a common callback owner. */
 final class SharedEntityState {
@@ -95,10 +97,14 @@ final class SharedEntityState {
         @Override protected MethodHandle[] computeValue(Class<?> type) {
             ArrayList<MethodHandle> fields = new ArrayList<>();
             for (Class<?> owner = type; owner != null && Entity.class.isAssignableFrom(owner); owner = owner.getSuperclass()) {
-                for (Field field : owner.getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive() || isMetadataType(field.getType())
-                            || Entity.class.isAssignableFrom(field.getType())
-                            || CooperativeTask.class.isAssignableFrom(field.getType())) continue;
+                Field[] declared;
+                try { declared = owner.getDeclaredFields(); }
+                catch (NoClassDefFoundError missing) {
+                    addTransformedFields(fields, owner, missing);
+                    continue;
+                }
+                for (Field field : declared) {
+                    if (Modifier.isStatic(field.getModifiers()) || excludedFieldType(field.getType())) continue;
                     // Unknown mod fields cannot be declared in a fixed AT/AW. Resolve access once per class.
                     if (field.trySetAccessible()) {
                         try {
@@ -113,6 +119,48 @@ final class SharedEntityState {
             return fields.toArray(MethodHandle[]::new);
         }
     };
+
+    private static boolean excludedFieldType(Class<?> type) {
+        return type.isPrimitive() || isMetadataType(type) || Entity.class.isAssignableFrom(type)
+                || CooperativeTask.class.isAssignableFrom(type);
+    }
+
+    private static void addTransformedFields(ArrayList<MethodHandle> fields, Class<?> owner,
+                                             NoClassDefFoundError reflectionFailure) {
+        List<FieldNode> definitions = SharedWeakMapExtension.transformedFields(owner);
+        if (definitions == null) {
+            throw new IllegalStateException("No transformed field layout for " + owner.getName(), reflectionFailure);
+        }
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
+        try { lookup = MethodHandles.privateLookupIn(owner, lookup); }
+        catch (IllegalAccessException inaccessible) {
+            LogManager.getLogger().warn("Cannot privately inspect entity fields in {}", owner.getName());
+        }
+        for (FieldNode definition : definitions) {
+            if (Modifier.isStatic(definition.access)) continue;
+            Class<?> fieldType;
+            try {
+                fieldType = MethodType.fromMethodDescriptorString("()" + definition.desc, owner.getClassLoader())
+                        .returnType();
+            } catch (TypeNotPresentException | NoClassDefFoundError unavailable) {
+                // A dedicated server cannot hold an instance of a client-only field type.
+                LogManager.getLogger().warn("Skipping unavailable entity field {}.{} ({})",
+                        owner.getName(), definition.name, definition.desc);
+                continue;
+            }
+            if (excludedFieldType(fieldType)) continue;
+            try {
+                fields.add(lookup.findGetter(owner, definition.name, fieldType)
+                        .asType(MethodType.methodType(Object.class, Entity.class)));
+            } catch (NoSuchFieldException mismatch) {
+                throw new IllegalStateException("Transformed entity field changed: " + owner.getName()
+                        + "." + definition.name, mismatch);
+            } catch (IllegalAccessException inaccessible) {
+                LogManager.getLogger().warn("Cannot inspect shared entity field {}.{}",
+                        owner.getName(), definition.name);
+            }
+        }
+    }
 
     private static final ThreadLocal<Scan> SCANS = ThreadLocal.withInitial(Scan::new);
 

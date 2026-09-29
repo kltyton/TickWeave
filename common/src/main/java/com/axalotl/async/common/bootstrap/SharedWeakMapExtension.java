@@ -6,16 +6,29 @@ import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.IExtension;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
 
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
 public final class SharedWeakMapExtension implements IExtension {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int CACHE_FLAGS = Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL;
+    private static final String FORGE_ENTITY = "net/minecraft/world/entity/Entity";
+    private static final String FABRIC_ENTITY = "net/minecraft/class_1297";
+    private static final ConcurrentHashMap<String, ClassNode> ENTITY_LAYOUTS = new ConcurrentHashMap<>();
+
+    public static List<FieldNode> transformedFields(Class<?> type) {
+        ClassNode node = ENTITY_LAYOUTS.get(type.getName().replace('.', '/'));
+        return node == null ? null : node.fields;
+    }
 
     public static void register() {
         MixinExtrasBootstrap.init();
@@ -52,6 +65,12 @@ public final class SharedWeakMapExtension implements IExtension {
         ClassNode owner = context.getClassNode();
         protectInitializers(owner);
         if (ConcurrentTagConstructor.optimize(owner)) LOGGER.debug("Avoided empty NBT map replacement in {}", owner.name);
+        ClassInfo info = ClassInfo.forName(owner.name);
+        if (owner.name.equals(FORGE_ENTITY) || owner.name.equals(FABRIC_ENTITY)
+                || info != null && (info.hasSuperClass(FORGE_ENTITY) || info.hasSuperClass(FABRIC_ENTITY))) {
+            // Retain the live node: later ModLauncher AFTER plugins may still add fields before class definition.
+            ENTITY_LAYOUTS.put(owner.name, owner);
+        }
     }
 
     public static int protectInitializers(ClassNode targetClass) {
