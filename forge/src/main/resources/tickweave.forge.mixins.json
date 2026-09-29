@@ -7,6 +7,8 @@
   "refmap": "tickweave.refmap.json",
   "mixins": [
     "entity.BlockBreakEventMixin",
+    "entity.InvulnerableAttackMixin",
+    "spawn.MergedSpawnPredicateMixin",
     "server.ServerWatchdogMixin",
     "utils.ClassInstanceMultiMapMixin",
     "utils.LazyOptionalMixin",
@@ -14,7 +16,8 @@
     "entity.DimensionTransferMixin",
     "entity.PersistentDataMixin",
     "entity.WalkNodeEvaluatorMixin",
-    "entity.NodeEvaluatorMixin"
+    "entity.NodeEvaluatorMixin",
+    "world.ForgeDistanceManagerMixin"
   ],
   "client": [],
   "server": [],

@@ -24,6 +24,11 @@ public class ServerTaskSubmissionMixin {
             original.call(action);
             return;
         }
+        if (!ParallelProcessor.isServerExecutionThread() && !EntityTasks.hasActiveContext()) {
+            // External commands belong to the native server queue after the current entity batch.
+            original.call(action);
+            return;
+        }
         Runnable captured = PlayerNetworkTasks.capture(action);
         Throwable failure = EntityTasks.onMain(() -> {
             try {
