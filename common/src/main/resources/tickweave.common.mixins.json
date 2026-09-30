@@ -8,6 +8,7 @@
     "server.PlayerPacketDispatchMixin",
     "server.PlayerBlockBreakMixin",
     "compat.BlueprintEntityMixin",
+    "compat.RhinoContextMixin",
     "compat.SophisticatedCoreAccessorMixin",
     "compat.SophisticatedCoreInventoryHandlerMixin",
     "compat.SophisticatedCoreSlotTrackerMixin",

@@ -63,6 +63,8 @@ public final class SharedWeakMapExtension implements IExtension {
     @Override
     public void postApply(ITargetClassContext context) {
         ClassNode owner = context.getClassNode();
+        int scripts = RhinoScriptDispatch.apply(owner);
+        if (scripts != 0) LOGGER.debug("Routed {} Rhino script entries in {}", scripts, owner.name);
         protectInitializers(owner);
         if (ConcurrentTagConstructor.optimize(owner)) LOGGER.debug("Avoided empty NBT map replacement in {}", owner.name);
         ClassInfo info = ClassInfo.forName(owner.name);

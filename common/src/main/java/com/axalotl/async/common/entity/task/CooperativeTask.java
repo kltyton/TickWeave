@@ -66,7 +66,15 @@ public final class CooperativeTask {
         return captured == null ? action : new Contextual(action, context(captured));
     }
 
-    public static Runnable pollAllowed(ConcurrentLinkedQueue<Runnable> queue) { return queue.poll(); }
+    public static Runnable pollAllowed(ConcurrentLinkedQueue<Runnable> queue) {
+        if (!ScriptCallbacks.isRunning()) return queue.poll();
+        for (Runnable action : queue) {
+            Runnable underlying = action;
+            while (underlying instanceof Contextual contextual) underlying = contextual.action;
+            if (!ScriptCallbacks.isPending(underlying) && queue.remove(action)) return action;
+        }
+        return null;
+    }
 
     public static <T> CompletableFuture<T> supplyAsync(Supplier<T> action, Executor target) {
         CompletableFuture<T> result = new CompletableFuture<>();
@@ -131,6 +139,7 @@ public final class CooperativeTask {
 
     public <T> T call(Supplier<T> action, boolean mayEnter, boolean mayAssist, Runnable pump) {
         if (ExecutionResources.holds(resource)) return action.get();
+        if (ScriptCallbacks.isRunning()) return onThread(action, mayAssist, pump);
         if (owner.get() == Thread.currentThread()) {
             return ExecutionResources.holds(resource) ? action.get() : inContext(CURRENT.get(), action, mayAssist, pump);
         }

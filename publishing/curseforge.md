@@ -1,6 +1,8 @@
-# CurseForge listing copy — TickWeave 2.1.12
+# TickWeave
 
 ## 简体中文
+
+**2.1.14+hotfix：** 修复 KubeJS/Rhino 脚本跨实体添加效果时的归属等待死锁。脚本入口与作用域由服务器线程协调，原生脚本锁和回调语义保留；实体、玩家连接与区块刷怪仍并行。下文性能数据绑定原 2.1.14，不能当作 hotfix 的新性能测量。
 
 **一句话总结：** 面向 Minecraft 1.20.1 Forge/Fabric 的实验性多核实体优化模组，旨在缓解大量怪物和玩家带来的服务器卡顿。
 
@@ -45,6 +47,8 @@ TickWeave 还改进了工作线程与服务器主线程之间的区块请求和�
 **致谢：** 感谢 HariMT、Axalotl、Alchemy、Bliss、FurryMileon、Grider、jediminer543 及其他上游贡献者。项目基于 HariMultiThread／Async 的工作继续开发；来源、所含第三方库及许可证见 [第三方声明](https://github.com/kltyton/TickWeave/blob/main/THIRD_PARTY_NOTICES.md)。
 
 ## English
+
+**2.1.14+hotfix:** Fixes an ownership deadlock when KubeJS/Rhino scripts apply effects to another entity. Script entry and scope operations are coordinated on the server thread while retaining native script locks and callback semantics. Entity ticking, player connections and chunk spawning remain parallel. The performance figures below belong to 2.1.14 and are not new hotfix measurements.
 
 **One-sentence summary:** An experimental multicore entity mod for Minecraft 1.20.1 Forge and Fabric, aimed at easing server lag when worlds have many mobs and players.
 

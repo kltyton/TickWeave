@@ -47,6 +47,7 @@ public class SynchronisePlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith(".compat.RhinoContextMixin")) return PlatformUtils.isModLoaded("rhino");
         if (mixinClassName.contains(".worldgen.")) {
             return !PlatformUtils.isModLoaded("c2me") && !PlatformUtils.isModLoaded("c2me-opts-math")
                     && !PlatformUtils.isModLoaded("noisium") && !PlatformUtils.isModLoaded("harichunk");
