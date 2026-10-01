@@ -9,6 +9,7 @@
     "entity.BlockBreakEventMixin",
     "entity.InvulnerableAttackMixin",
     "spawn.MergedSpawnPredicateMixin",
+    "server.ServerLevelPartsMixin",
     "server.ServerWatchdogMixin",
     "utils.ClassInstanceMultiMapMixin",
     "utils.LazyOptionalMixin",

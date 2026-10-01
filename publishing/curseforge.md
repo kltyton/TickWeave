@@ -2,7 +2,7 @@
 
 ## 简体中文
 
-**2.1.14+hotfix：** 修复 KubeJS/Rhino 脚本跨实体添加效果时的归属等待死锁。脚本入口与作用域由服务器线程协调，原生脚本锁和回调语义保留；实体、玩家连接与区块刷怪仍并行。下文性能数据绑定原 2.1.14，不能当作 hotfix 的新性能测量。
+**2.1.14+hotfix.2：** 修复共享标量延迟表（包含 FTB Quests 背包检测队列）的并发读写与迭代异常，以及 Forge 多部件实体在碰撞、推挤和刷怪查询中的迭代器异常/空部件。保留上一版 KubeJS/Rhino 跨实体脚本死锁修复；实体、玩家连接与区块刷怪仍并行。下文性能数据绑定原 2.1.14，不能当作 hotfix 的新性能测量。
 
 **一句话总结：** 面向 Minecraft 1.20.1 Forge/Fabric 的实验性多核实体优化模组，旨在缓解大量怪物和玩家带来的服务器卡顿。
 
@@ -48,7 +48,7 @@ TickWeave 还改进了工作线程与服务器主线程之间的区块请求和�
 
 ## English
 
-**2.1.14+hotfix:** Fixes an ownership deadlock when KubeJS/Rhino scripts apply effects to another entity. Script entry and scope operations are coordinated on the server thread while retaining native script locks and callback semantics. Entity ticking, player connections and chunk spawning remain parallel. The performance figures below belong to 2.1.14 and are not new hotfix measurements.
+**2.1.14+hotfix.2:** Fixes concurrent mutation and iteration in analyzed scalar delay tables, including FTB Quests inventory detection, plus iterator failures/null parts in Forge multipart collision, pushing and spawn queries. Retains the previous KubeJS/Rhino cross-entity script deadlock fix; entity ticking, player connections and chunk spawning remain parallel. The performance figures below belong to 2.1.14 and are not new hotfix measurements.
 
 **One-sentence summary:** An experimental multicore entity mod for Minecraft 1.20.1 Forge and Fabric, aimed at easing server lag when worlds have many mobs and players.
 
