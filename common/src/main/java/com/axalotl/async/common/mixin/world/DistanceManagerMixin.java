@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.longs.LongSet
- *  net.minecraft.server.level.ChunkHolder
- *  net.minecraft.server.level.DistanceManager
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.world;
 
 import com.axalotl.async.common.parallelised.ConcurrentCollections;

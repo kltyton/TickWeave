@@ -1,25 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.shorts.ShortSet
- *  net.minecraft.core.BlockPos
- *  net.minecraft.core.SectionPos
- *  net.minecraft.server.level.ChunkHolder
- *  net.minecraft.server.level.ChunkHolder$LevelChangeListener
- *  net.minecraft.server.level.ChunkHolder$PlayerProvider
- *  net.minecraft.world.level.ChunkPos
- *  net.minecraft.world.level.LevelHeightAccessor
- *  net.minecraft.world.level.chunk.LevelChunk
- *  net.minecraft.world.level.lighting.LevelLightEngine
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- */
 package com.axalotl.async.common.mixin.world;
 
 import com.axalotl.async.common.parallelised.fastutil.ConcurrentShortHashSet;

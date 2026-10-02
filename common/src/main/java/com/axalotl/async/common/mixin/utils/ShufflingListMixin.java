@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.entity.ai.behavior.ShufflingList
- *  net.minecraft.world.entity.ai.behavior.ShufflingList$WeightedEntry
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.utils;
 
 import java.util.List;

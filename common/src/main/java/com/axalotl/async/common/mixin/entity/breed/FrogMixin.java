@@ -1,17 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.server.level.ServerLevel
- *  net.minecraft.world.entity.EntityType
- *  net.minecraft.world.entity.animal.Animal
- *  net.minecraft.world.entity.animal.frog.Frog
- *  net.minecraft.world.level.Level
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.entity.breed;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;

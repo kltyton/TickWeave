@@ -1,18 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.world.level.redstone.CollectingNeighborUpdater
- *  net.minecraft.world.level.redstone.CollectingNeighborUpdater$NeighborUpdates
- *  net.minecraft.world.level.redstone.NeighborUpdater
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.world;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;

@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.server.level.ServerLevel
- *  net.minecraft.util.profiling.InactiveProfiler
- *  net.minecraft.util.profiling.ProfilerFiller
- *  net.minecraft.world.level.NaturalSpawner
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Redirect
- */
 package com.axalotl.async.common.mixin.entity.spawn;
 
 import com.axalotl.async.common.ParallelProcessor;

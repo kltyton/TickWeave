@@ -1,14 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.server.level.ServerLevel$EntityCallbacks
- *  net.minecraft.world.entity.Entity
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.server;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;

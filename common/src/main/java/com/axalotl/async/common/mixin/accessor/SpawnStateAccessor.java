@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
- *  net.minecraft.world.entity.MobCategory
- *  net.minecraft.world.level.LocalMobCapCalculator
- *  net.minecraft.world.level.NaturalSpawner$SpawnState
- *  net.minecraft.world.level.PotentialCalculator
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.gen.Invoker
- */
 package com.axalotl.async.common.mixin.accessor;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

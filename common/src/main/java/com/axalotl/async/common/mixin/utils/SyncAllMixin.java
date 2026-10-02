@@ -1,22 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.advancements.critereon.SimpleCriterionTrigger
- *  net.minecraft.util.ClassInstanceMultiMap
- *  net.minecraft.util.profiling.ActiveProfiler
- *  net.minecraft.world.entity.ai.navigation.PathNavigation
- *  net.minecraft.world.entity.monster.warden.AngerManagement
- *  net.minecraft.world.level.border.WorldBorder
- *  net.minecraft.world.level.chunk.PalettedContainer
- *  net.minecraft.world.level.entity.EntitySection
- *  net.minecraft.world.level.gameevent.EuclideanGameEventListenerRegistry
- *  net.minecraft.world.level.levelgen.LegacyRandomSource
- *  net.minecraft.world.level.lighting.DynamicGraphMinFixedPoint
- *  net.minecraft.world.level.pathfinder.BinaryHeap
- *  net.minecraft.world.ticks.LevelChunkTicks
- *  org.spongepowered.asm.mixin.Mixin
- */
 package com.axalotl.async.common.mixin.utils;
 
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;

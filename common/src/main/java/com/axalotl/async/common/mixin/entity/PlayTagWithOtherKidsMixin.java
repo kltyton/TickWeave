@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.entity.LivingEntity
- *  net.minecraft.world.entity.ai.behavior.PlayTagWithOtherKids
- *  net.minecraft.world.entity.ai.memory.MemoryModuleType
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package com.axalotl.async.common.mixin.entity;
 
 import net.minecraft.world.entity.LivingEntity;

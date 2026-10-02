@@ -1,18 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
- *  net.minecraft.server.level.ServerPlayer
- *  net.minecraft.world.level.ChunkPos
- *  net.minecraft.world.level.LocalMobCapCalculator
- *  net.minecraft.world.level.LocalMobCapCalculator$MobCounts
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package com.axalotl.async.common.mixin.entity.spawn;
 
 import com.axalotl.async.common.ParallelProcessor;

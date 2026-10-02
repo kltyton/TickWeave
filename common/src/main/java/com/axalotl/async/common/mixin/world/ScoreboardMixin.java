@@ -1,13 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.scores.Objective
- *  net.minecraft.world.scores.Score
- *  net.minecraft.world.scores.Scoreboard
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.world;
 
 import com.axalotl.async.common.parallelised.ConcurrentCollections;

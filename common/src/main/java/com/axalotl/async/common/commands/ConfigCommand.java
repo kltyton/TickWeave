@@ -1,23 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.mojang.brigadier.arguments.ArgumentType
- *  com.mojang.brigadier.arguments.BoolArgumentType
- *  com.mojang.brigadier.arguments.StringArgumentType
- *  com.mojang.brigadier.builder.LiteralArgumentBuilder
- *  com.mojang.brigadier.context.CommandContext
- *  com.mojang.brigadier.suggestion.SuggestionsBuilder
- *  net.minecraft.ChatFormatting
- *  net.minecraft.commands.CommandSourceStack
- *  net.minecraft.commands.Commands
- *  net.minecraft.commands.arguments.ResourceLocationArgument
- *  net.minecraft.core.Registry
- *  net.minecraft.network.chat.Component
- *  net.minecraft.network.chat.MutableComponent
- *  net.minecraft.resources.ResourceLocation
- *  net.minecraft.world.entity.EntityType
- */
 package com.axalotl.async.common.commands;
 
 import com.axalotl.async.common.commands.AsyncCommand;

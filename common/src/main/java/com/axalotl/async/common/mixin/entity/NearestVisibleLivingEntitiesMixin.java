@@ -1,19 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap
- *  net.minecraft.world.entity.LivingEntity
- *  net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities
- *  net.minecraft.world.entity.ai.sensing.Sensor
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- */
 package com.axalotl.async.common.mixin.entity;
 
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;

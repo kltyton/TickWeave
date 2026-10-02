@@ -1,26 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.tags.BlockTags
- *  net.minecraft.util.Mth
- *  net.minecraft.world.damagesource.DamageSource
- *  net.minecraft.world.effect.MobEffect
- *  net.minecraft.world.effect.MobEffectInstance
- *  net.minecraft.world.entity.Entity
- *  net.minecraft.world.entity.EntityType
- *  net.minecraft.world.entity.LivingEntity
- *  net.minecraft.world.level.Level
- *  net.minecraft.world.level.block.state.BlockState
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package com.axalotl.async.common.mixin.entity;
 
 import com.axalotl.async.common.entity.task.EntityTasks;

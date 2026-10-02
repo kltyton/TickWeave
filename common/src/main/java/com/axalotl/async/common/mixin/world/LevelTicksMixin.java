@@ -1,27 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  it.unimi.dsi.fastutil.longs.Long2LongMap
- *  it.unimi.dsi.fastutil.longs.Long2ObjectMap
- *  net.minecraft.util.profiling.ProfilerFiller
- *  net.minecraft.world.level.ChunkPos
- *  net.minecraft.world.ticks.LevelChunkTicks
- *  net.minecraft.world.ticks.LevelTickAccess
- *  net.minecraft.world.ticks.LevelTicks
- *  net.minecraft.world.ticks.ScheduledTick
- *  org.jetbrains.annotations.NotNull
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- */
 package com.axalotl.async.common.mixin.world;
 
 import com.axalotl.async.common.parallelised.fastutil.Long2LongConcurrentHashMap;

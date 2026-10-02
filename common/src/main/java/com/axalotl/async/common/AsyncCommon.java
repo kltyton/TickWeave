@@ -1,10 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.apache.logging.log4j.LogManager
- *  org.apache.logging.log4j.Logger
- */
 package com.axalotl.async.common;
 
 import com.axalotl.async.common.platform.PlatformUtils;

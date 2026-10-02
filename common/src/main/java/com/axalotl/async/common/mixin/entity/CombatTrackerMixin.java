@@ -1,14 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.damagesource.CombatEntry
- *  net.minecraft.world.damagesource.CombatTracker
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.entity;
 
 import java.util.List;

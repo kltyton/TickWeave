@@ -1,17 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.entity.ai.goal.BreedGoal
- *  net.minecraft.world.entity.animal.Animal
- *  net.minecraft.world.entity.animal.Turtle
- *  net.minecraft.world.entity.animal.Turtle$TurtleBreedGoal
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Redirect
- */
 package com.axalotl.async.common.mixin.entity.breed;
 
 import com.axalotl.async.common.mixin.accessor.TurtleAccessor;

@@ -1,14 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.core.Holder
- *  net.minecraft.world.entity.ai.attributes.Attribute
- *  net.minecraft.world.entity.ai.attributes.AttributeInstance
- *  net.minecraft.world.entity.ai.attributes.AttributeMap
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.entity;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;

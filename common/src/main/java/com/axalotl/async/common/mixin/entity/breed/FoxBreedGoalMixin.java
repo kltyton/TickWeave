@@ -1,17 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.entity.ai.goal.BreedGoal
- *  net.minecraft.world.entity.animal.Animal
- *  net.minecraft.world.entity.animal.Fox
- *  net.minecraft.world.entity.animal.Fox$FoxBreedGoal
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- */
 package com.axalotl.async.common.mixin.entity.breed;
 
 import java.util.UUID;

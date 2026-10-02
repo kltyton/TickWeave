@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.commands.CommandSourceStack
- *  net.minecraft.resources.ResourceLocation
- *  org.slf4j.Logger
- *  org.slf4j.LoggerFactory
- */
 package com.axalotl.async.common.config;
 
 import com.axalotl.async.common.commands.AsyncCommand;

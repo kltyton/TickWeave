@@ -1,17 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  com.mojang.authlib.GameProfile
- *  net.minecraft.core.BlockPos
- *  net.minecraft.server.level.ServerPlayer
- *  net.minecraft.world.damagesource.DamageSource
- *  net.minecraft.world.entity.player.Player
- *  net.minecraft.world.level.Level
- *  org.spongepowered.asm.mixin.Mixin
- */
 package com.axalotl.async.common.mixin.server;
 
 import com.axalotl.async.common.entity.task.EntityTasks;

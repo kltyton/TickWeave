@@ -1,18 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.world.entity.EntityType
- *  net.minecraft.world.entity.EquipmentSlot
- *  net.minecraft.world.entity.Mob
- *  net.minecraft.world.entity.item.ItemEntity
- *  net.minecraft.world.item.ItemStack
- *  org.jetbrains.annotations.Nullable
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.entity;
 
 import com.axalotl.async.common.entity.task.EntityTasks;

@@ -1,20 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.world.entity.Entity
- *  net.minecraft.world.item.ItemStack
- *  net.minecraft.world.level.Level
- *  net.minecraft.world.level.LevelAccessor
- *  net.minecraft.world.level.block.Block
- *  net.minecraft.world.level.block.entity.BlockEntity
- *  net.minecraft.world.level.block.state.BlockState
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.world;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;

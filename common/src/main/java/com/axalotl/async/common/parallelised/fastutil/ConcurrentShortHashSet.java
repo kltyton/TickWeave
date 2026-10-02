@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.shorts.ShortCollection
- *  it.unimi.dsi.fastutil.shorts.ShortIterator
- *  it.unimi.dsi.fastutil.shorts.ShortSet
- *  org.jetbrains.annotations.NotNull
- */
 package com.axalotl.async.common.parallelised.fastutil;
 
 import com.axalotl.async.common.parallelised.fastutil.FastUtilHackUtil;

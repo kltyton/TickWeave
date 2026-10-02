@@ -1,6 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- */
 package com.axalotl.async.common.parallelised;
 
 import java.util.Collections;

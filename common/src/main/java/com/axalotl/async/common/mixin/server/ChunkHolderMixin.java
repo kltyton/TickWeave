@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.server.level.ChunkHolder
- *  net.minecraft.world.level.chunk.LevelChunk
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.server;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;

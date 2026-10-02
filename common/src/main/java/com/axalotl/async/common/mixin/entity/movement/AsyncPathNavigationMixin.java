@@ -1,21 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.core.BlockPos
- *  net.minecraft.world.entity.Mob
- *  net.minecraft.world.entity.ai.navigation.PathNavigation
- *  net.minecraft.world.level.pathfinder.Node
- *  net.minecraft.world.level.pathfinder.Path
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package com.axalotl.async.common.mixin.entity.movement;
 
 import com.axalotl.async.common.parallelised.utils.AsyncSafeNavigation;

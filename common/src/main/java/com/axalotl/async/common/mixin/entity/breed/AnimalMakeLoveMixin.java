@@ -1,19 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.server.level.ServerLevel
- *  net.minecraft.world.entity.ai.behavior.AnimalMakeLove
- *  net.minecraft.world.entity.ai.memory.MemoryModuleType
- *  net.minecraft.world.entity.animal.Animal
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package com.axalotl.async.common.mixin.entity.breed;
 
 import com.llamalad7.mixinextras.sugar.Local;

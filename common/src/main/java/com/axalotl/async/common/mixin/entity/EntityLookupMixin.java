@@ -1,23 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  it.unimi.dsi.fastutil.ints.Int2ObjectMap
- *  net.minecraft.world.level.entity.EntityAccess
- *  net.minecraft.world.level.entity.EntityLookup
- *  org.slf4j.Logger
- *  org.slf4j.LoggerFactory
- *  org.spongepowered.asm.mixin.Final
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Mutable
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- */
 package com.axalotl.async.common.mixin.entity;
 
 import com.axalotl.async.common.entity.query.EntityLookupView;

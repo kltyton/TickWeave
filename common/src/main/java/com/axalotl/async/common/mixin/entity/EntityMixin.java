@@ -1,31 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.google.common.collect.ImmutableList
- *  com.google.common.collect.Lists
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.nbt.CompoundTag
- *  net.minecraft.server.level.ServerLevel
- *  net.minecraft.world.entity.Entity
- *  net.minecraft.world.entity.Entity$RemovalReason
- *  net.minecraft.world.entity.player.Player
- *  net.minecraft.world.level.Level
- *  net.minecraft.world.level.block.Blocks
- *  net.minecraft.world.level.block.state.BlockState
- *  net.minecraft.world.level.chunk.ChunkAccess
- *  net.minecraft.world.level.chunk.ChunkStatus
- *  net.minecraft.world.level.chunk.LevelChunk
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- *  org.spongepowered.asm.mixin.Unique
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Inject
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfo
- *  org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
- */
 package com.axalotl.async.common.mixin.entity;
 
 import com.axalotl.async.common.entity.task.CooperativeTask;

@@ -1,25 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap
- *  it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
- *  it.unimi.dsi.fastutil.ints.IntArrayList
- *  it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap
- *  it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap
- *  it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet
- *  it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
- *  it.unimi.dsi.fastutil.objects.Object2ReferenceOpenCustomHashMap
- *  it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet
- *  it.unimi.dsi.fastutil.objects.Reference2ByteOpenHashMap
- *  it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap
- *  it.unimi.dsi.fastutil.objects.Reference2LongOpenHashMap
- *  it.unimi.dsi.fastutil.objects.Reference2ReferenceArrayMap
- *  it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap
- *  it.unimi.dsi.fastutil.objects.ReferenceArrayList
- *  it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet
- *  org.spongepowered.asm.mixin.Mixin
- */
 package com.axalotl.async.common.mixin.utils;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;

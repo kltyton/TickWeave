@@ -1,17 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod
- *  com.llamalad7.mixinextras.injector.wrapoperation.Operation
- *  net.minecraft.core.BlockPos
- *  net.minecraft.world.entity.Mob
- *  net.minecraft.world.level.PathNavigationRegion
- *  net.minecraft.world.level.pathfinder.Path
- *  net.minecraft.world.level.pathfinder.PathFinder
- *  org.jetbrains.annotations.Nullable
- *  org.spongepowered.asm.mixin.Mixin
- */
 package com.axalotl.async.common.mixin.entity.movement;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;

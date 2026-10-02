@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.server.level.ServerLevel
- *  net.minecraft.server.level.ServerPlayer
- *  net.minecraft.world.entity.LivingEntity
- *  net.minecraft.world.entity.ai.sensing.PlayerSensor
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.injection.At
- *  org.spongepowered.asm.mixin.injection.Redirect
- */
 package com.axalotl.async.common.mixin.entity.sensor;
 
 import com.axalotl.async.common.config.AsyncConfig;

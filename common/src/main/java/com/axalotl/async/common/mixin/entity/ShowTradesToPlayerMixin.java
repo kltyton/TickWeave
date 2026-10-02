@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.world.entity.ai.behavior.ShowTradesToPlayer
- *  net.minecraft.world.item.ItemStack
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Shadow
- */
 package com.axalotl.async.common.mixin.entity;
 
 import java.util.List;

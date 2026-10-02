@@ -1,24 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
- *  net.minecraft.core.BlockPos
- *  net.minecraft.world.entity.Entity
- *  net.minecraft.world.entity.Mob
- *  net.minecraft.world.entity.MobCategory
- *  net.minecraft.world.level.ChunkPos
- *  net.minecraft.world.level.LocalMobCapCalculator
- *  net.minecraft.world.level.NaturalSpawner
- *  net.minecraft.world.level.NaturalSpawner$ChunkGetter
- *  net.minecraft.world.level.NaturalSpawner$SpawnState
- *  net.minecraft.world.level.PotentialCalculator
- *  net.minecraft.world.level.biome.MobSpawnSettings$MobSpawnCost
- *  net.minecraft.world.level.chunk.ChunkAccess
- *  org.spongepowered.asm.mixin.Mixin
- *  org.spongepowered.asm.mixin.Overwrite
- *  org.spongepowered.asm.mixin.Unique
- */
 package com.axalotl.async.common.mixin.spawn;
 
 import com.axalotl.async.common.config.AsyncConfig;

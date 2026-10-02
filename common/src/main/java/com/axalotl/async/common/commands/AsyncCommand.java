@@ -1,16 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  com.mojang.brigadier.CommandDispatcher
- *  com.mojang.brigadier.builder.LiteralArgumentBuilder
- *  net.minecraft.commands.CommandSourceStack
- *  net.minecraft.commands.Commands
- *  net.minecraft.core.Registry
- *  net.minecraft.core.registries.Registries
- *  net.minecraft.network.chat.Component
- *  net.minecraft.world.entity.EntityType
- */
 package com.axalotl.async.common.commands;
 
 import com.axalotl.async.common.commands.ConfigCommand;
