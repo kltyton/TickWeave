@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.MixinExtrasBootstrap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -16,6 +17,8 @@ import org.spongepowered.asm.mixin.transformer.ext.IExtension;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
 
 import java.util.List;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class SharedWeakMapExtension implements IExtension {
@@ -24,10 +27,24 @@ public final class SharedWeakMapExtension implements IExtension {
     private static final String FORGE_ENTITY = "net/minecraft/world/entity/Entity";
     private static final String FABRIC_ENTITY = "net/minecraft/class_1297";
     private static final ConcurrentHashMap<String, ClassNode> ENTITY_LAYOUTS = new ConcurrentHashMap<>();
+    private static final ClassValue<List<FieldNode>> UNMIXED_LAYOUTS = new ClassValue<>() {
+        @Override protected List<FieldNode> computeValue(Class<?> type) {
+            String resource = "/" + type.getName().replace('.', '/') + ".class";
+            try (InputStream input = type.getResourceAsStream(resource)) {
+                if (input == null) throw new IllegalStateException("Entity class resource unavailable: " + type.getName());
+                ClassNode node = new ClassNode();
+                new ClassReader(input).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                return List.copyOf(node.fields);
+            } catch (IOException failure) {
+                throw new IllegalStateException("Cannot read entity field layout: " + type.getName(), failure);
+            }
+        }
+    };
 
     public static List<FieldNode> transformedFields(Class<?> type) {
         ClassNode node = ENTITY_LAYOUTS.get(type.getName().replace('.', '/'));
-        return node == null ? null : node.fields;
+        // Classes without a Mixin target never enter postApply; field descriptors still remain readable.
+        return node == null ? UNMIXED_LAYOUTS.get(type) : node.fields;
     }
 
     public static void register() {
