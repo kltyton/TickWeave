@@ -38,6 +38,7 @@ public class AttributeMapMixin {
     private Object tickweave$existingAttribute(Map<?, ?> map, Object key,
                                               Function<?, ?> factory, Operation<Object> original) {
         if (map.getClass() == ConcurrentHashMap.class) {
+            if (key == null) return factory.apply(null);
             Object existing = map.get(key);
             if (existing != null) return existing;
         }
