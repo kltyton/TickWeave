@@ -261,7 +261,7 @@ public final class CollectionPlan {
                 String value = types.group(2);
                 boolean shared = (field.access & Opcodes.ACC_STATIC) != 0 || globallyReachable(owner.name);
                 if (!shared) return;
-                if (scalar(key) && scalar(value)) {
+                if ((scalar(key) || recordKey(key)) && scalar(value)) {
                     candidates.put(id, new Candidate(id, Kind.SCALAR_MAP, key));
                 } else if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL)) != 0 && (key.equals("java/util/UUID")
                         || key.equals("java/lang/String") && (sources.subtype(value, attributeBase)
@@ -290,6 +290,54 @@ public final class CollectionPlan {
                         "java/lang/Float", "java/lang/Double" -> true;
                 default -> false;
             };
+        }
+
+        private boolean recordKey(String name) throws IOException {
+            ClassNode record = sources.read(name);
+            if (record == null || (record.access & (Opcodes.ACC_RECORD | Opcodes.ACC_FINAL))
+                    != (Opcodes.ACC_RECORD | Opcodes.ACC_FINAL) || !"java/lang/Record".equals(record.superName)) return false;
+            List<FieldNode> components = record.fields.stream()
+                    .filter(field -> (field.access & Opcodes.ACC_STATIC) == 0).toList();
+            for (FieldNode component : components) {
+                if ((component.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL))
+                        != (Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL)) return false;
+                Type type = Type.getType(component.desc);
+                if (type.getSort() >= Type.BOOLEAN && type.getSort() <= Type.DOUBLE) continue;
+                if (type.getSort() != Type.OBJECT || !(scalar(type.getInternalName())
+                        || type.getInternalName().equals("net/minecraft/resources/ResourceKey")
+                        || type.getInternalName().equals("net/minecraft/class_5321"))) return false;
+            }
+            return generatedRecordMethod(record, components, "hashCode", "()I", 1)
+                    && generatedRecordMethod(record, components, "equals", "(Ljava/lang/Object;)Z", 2);
+        }
+
+        private static boolean generatedRecordMethod(ClassNode record, List<FieldNode> components,
+                                                     String name, String descriptor, int arguments) {
+            MethodNode method = record.methods.stream().filter(value -> value.name.equals(name)
+                    && value.desc.equals(descriptor)).findFirst().orElse(null);
+            if (method == null || !method.tryCatchBlocks.isEmpty()) return false;
+            List<AbstractInsnNode> code = boundedInstructions(method);
+            if (code == null || code.size() != arguments + 2) return false;
+            for (int i = 0; i < arguments; i++) {
+                if (!(code.get(i) instanceof VarInsnNode load) || load.getOpcode() != Opcodes.ALOAD
+                        || load.var != i) return false;
+            }
+            if (!(code.get(arguments) instanceof InvokeDynamicInsnNode call)
+                    || !call.name.equals(name) || !call.bsm.getOwner().equals("java/lang/runtime/ObjectMethods")
+                    || !call.bsm.getName().equals("bootstrap") || call.bsm.getTag() != Opcodes.H_INVOKESTATIC
+                    || call.bsmArgs.length != components.size() + 2
+                    || !Type.getObjectType(record.name).equals(call.bsmArgs[0])
+                    || code.get(arguments + 1).getOpcode() != Opcodes.IRETURN) return false;
+            String componentNames = components.stream().map(field -> field.name)
+                    .collect(java.util.stream.Collectors.joining(";"));
+            if (!componentNames.equals(call.bsmArgs[1])) return false;
+            for (int i = 0; i < components.size(); i++) {
+                FieldNode component = components.get(i);
+                if (!(call.bsmArgs[i + 2] instanceof Handle getter) || getter.getTag() != Opcodes.H_GETFIELD
+                        || !getter.getOwner().equals(record.name) || !getter.getName().equals(component.name)
+                        || !getter.getDesc().equals(component.desc)) return false;
+            }
+            return true;
         }
 
         private boolean primitiveState(String name) throws IOException {
