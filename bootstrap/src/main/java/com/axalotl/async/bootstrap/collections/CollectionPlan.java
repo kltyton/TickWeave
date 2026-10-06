@@ -62,11 +62,14 @@ public final class CollectionPlan {
     private final Map<String, List<Rule>> rules;
     private final EntityCollectionMethods entityMethods;
     private final SharedCollectionMethods sharedMethods;
+    private final InventoryThreadMethods inventoryMethods;
 
-    private CollectionPlan(Map<String, List<Rule>> rules, EntityCollectionMethods entityMethods, SharedCollectionMethods sharedMethods) {
+    private CollectionPlan(Map<String, List<Rule>> rules, EntityCollectionMethods entityMethods,
+                           SharedCollectionMethods sharedMethods, InventoryThreadMethods inventoryMethods) {
         this.rules = Map.copyOf(rules);
         this.entityMethods = entityMethods;
         this.sharedMethods = sharedMethods;
+        this.inventoryMethods = inventoryMethods;
     }
 
     public static CollectionPlan scan(List<Path> roots, String entityBase, String attributeBase) throws IOException {
@@ -77,6 +80,7 @@ public final class CollectionPlan {
         Set<String> targets = new HashSet<>(rules.keySet());
         targets.addAll(entityMethods.targets());
         targets.addAll(sharedMethods.targets());
+        targets.addAll(inventoryMethods.targets());
         return Set.copyOf(targets);
     }
 
@@ -84,12 +88,13 @@ public final class CollectionPlan {
         List<Rule> selected = rules.get(target);
         return selected != null && !selected.isEmpty()
                 && selected.stream().allMatch(rule -> rule.kind == Kind.SCALAR_MAP || rule.kind == Kind.SCALAR_LONG)
-                && !entityMethods.targets().contains(target) && !sharedMethods.targets().contains(target);
+                && !entityMethods.targets().contains(target) && !sharedMethods.targets().contains(target)
+                && !inventoryMethods.targets().contains(target);
     }
 
     /** Retains the original HashMap/WeakHashMap/ArrayList, including null and callback behavior. */
     public int protect(ClassNode target) {
-        int wrapped = entityMethods.protect(target) + sharedMethods.protect(target);
+        int wrapped = entityMethods.protect(target) + sharedMethods.protect(target) + inventoryMethods.protect(target);
         for (Rule rule : rules.getOrDefault(target.name, List.of())) {
             List<Store> stores = new ArrayList<>();
             boolean matched = true;
@@ -242,7 +247,7 @@ public final class CollectionPlan {
             }
             result.replaceAll((owner, selected) -> List.copyOf(selected));
             return new CollectionPlan(result, EntityCollectionMethods.scan(sources, entityBase),
-                    SharedCollectionMethods.scan(sources, entityBase));
+                    SharedCollectionMethods.scan(sources, entityBase), InventoryThreadMethods.scan(sources));
         }
 
         private void select(ClassNode owner, FieldNode field) throws IOException {
