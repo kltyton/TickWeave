@@ -13,14 +13,14 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(PersistentEntitySectionManager.Callback.class)
 public abstract class PersistentEntitySectionManagerCallbackMixin {
     @Unique private final AtomicBoolean async$moveQueued = new AtomicBoolean();
-    @Unique private boolean async$removed;
+    @Unique private final AtomicBoolean async$removed = new AtomicBoolean();
 
     @WrapMethod(method = "onMove")
     private void async$onMove(Operation<Void> original) {
         if (async$moveQueued.compareAndSet(false, true)) {
             ParallelProcessor.queueEntityCallback(() -> {
                 async$moveQueued.set(false);
-                if (!async$removed) original.call();
+                if (!async$removed.get()) original.call();
             });
         }
     }
@@ -28,9 +28,8 @@ public abstract class PersistentEntitySectionManagerCallbackMixin {
     @WrapMethod(method = "onRemove")
     private void async$onRemove(Entity.RemovalReason reason, Operation<Void> original) {
         ParallelProcessor.queueEntityCallback(() -> {
-            if (!async$removed) {
+            if (async$removed.compareAndSet(false, true)) {
                 original.call(reason);
-                async$removed = true;
             }
         });
     }

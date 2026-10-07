@@ -71,6 +71,7 @@
     "entity.spawn.PotentialCalculatorMixin",
     "server.ChunkHolderMixin",
     "server.ChunkMapMixin",
+    "server.ChunkMapPlayerRegistrationMixin",
     "server.ChunkMapTrackedEntityMixin",
     "server.MinecraftServerMixin",
     "server.PersistentEntitySectionManagerCallbackMixin",

@@ -7,6 +7,7 @@
   "refmap": "tickweave.refmap.json",
   "mixins": [
     "entity.BlockBreakEventMixin",
+    "entity.ItemPickupEventMixin",
     "entity.InvulnerableAttackMixin",
     "spawn.MergedSpawnPredicateMixin",
     "server.ServerLevelPartsMixin",

@@ -66,6 +66,9 @@ public final class SharedWeakMapExtension implements IExtension {
         if (extensions.getExtensions().stream().noneMatch(SynchronizedForwarderExtension.class::isInstance)) {
             extensions.add(new SynchronizedForwarderExtension());
         }
+        if (extensions.getExtensions().stream().noneMatch(PlayerRegistrationExtension.class::isInstance)) {
+            extensions.add(new PlayerRegistrationExtension());
+        }
     }
 
     @Override
