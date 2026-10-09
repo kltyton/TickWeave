@@ -47,6 +47,7 @@ public final class CollectionPlan {
             "putIfAbsent(Ljava/lang/Object;J)J", "removeLong(Ljava/lang/Object;)J",
             "keySet()Lit/unimi/dsi/fastutil/objects/ObjectSet;", "isEmpty()Z");
     private static final Pattern MAP_TYPES = Pattern.compile("^Ljava/util/Map<L([^;<]+);L([^;<]+);>;$");
+    private static final String SET_CACHE_TYPE = "Ljava/util/Map<Ljava/util/UUID;Ljava/util/Set<Ljava/lang/String;>;>;";
     private static final Pattern LIST_TYPE = Pattern.compile("^Ljava/util/List<L([^;<]+);>;$");
     private static final Pattern SET_TYPE = Pattern.compile("^Ljava/util/Set<L([^;<]+);>;$");
     private static final String COMPUTE = "computeIfAbsent(Ljava/lang/Object;Ljava/util/function/Function;)Ljava/lang/Object;";
@@ -113,6 +114,11 @@ public final class CollectionPlan {
                 LOGGER.log(System.Logger.Level.WARNING, "Shared collection initializer changed before protection: {0}", rule.field);
                 continue;
             }
+            if (rule.kind == Kind.SET_CACHE) {
+                // The cache epoch, invalidation and computation form one receiver-owned operation.
+                wrapped += SharedCollectionMethods.protect(target, Set.of(rule.field.name + rule.field.descriptor));
+                continue;
+            }
             for (Store store : stores) {
                 if (rule.kind == Kind.SCALAR_LONG) {
                     store.allocation.desc = SNAPSHOT_LONG_MAP;
@@ -167,7 +173,7 @@ public final class CollectionPlan {
     private record MethodId(String owner, String name, String descriptor) {}
     private record Rule(FieldId field, String backing, int assignments, Kind kind) {}
     private record Store(MethodNode method, FieldInsnNode field, TypeInsnNode allocation, MethodInsnNode constructor) {}
-    private enum Kind { CACHE, QUEUE, WEAK_ENTITY, KEY_SET, SCALAR_MAP, SCALAR_LONG }
+    private enum Kind { CACHE, SET_CACHE, QUEUE, WEAK_ENTITY, KEY_SET, SCALAR_MAP, SCALAR_LONG }
 
     private static final class Candidate {
         final FieldId field;
@@ -235,6 +241,16 @@ public final class CollectionPlan {
             for (Candidate candidate : candidates.values()) {
                 if (candidate.rejected || candidate.assignments == 0 || !candidate.operation) continue;
                 if (candidate.kind == Kind.QUEUE && !candidate.removal) continue;
+                if (candidate.kind == Kind.SET_CACHE) {
+                    ClassNode owner = sources.read(candidate.field.owner);
+                    Set<String> members = Set.of(candidate.field.name + candidate.field.descriptor);
+                    Set<String> methods = EntityCollectionMethods.selectMethods(owner, members);
+                    if (!EntityCollectionMethods.receiverFields(owner, members)
+                            || owner.methods.stream().anyMatch(method -> !method.name.startsWith("<")
+                            && methods.contains(method.name + method.desc)
+                            && (Type.getReturnType(method.desc).getSort() >= Type.ARRAY
+                            || (method.access & (Opcodes.ACC_STATIC | Opcodes.ACC_SYNCHRONIZED)) != 0))) continue;
+                }
                 if (candidate.kind == Kind.CACHE || candidate.kind == Kind.SCALAR_MAP) {
                     if (candidate.kind == Kind.CACHE && candidate.factories.isEmpty()) continue;
                     for (Handle factory : candidate.factories) {
@@ -260,6 +276,12 @@ public final class CollectionPlan {
                 if (type.matches() && scalar(type.group(1)))
                     candidates.put(id, new Candidate(id, Kind.SCALAR_LONG, type.group(1)));
             } else if (field.desc.equals(MAP)) {
+                if (SET_CACHE_TYPE.equals(field.signature)
+                        && (field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL | Opcodes.ACC_STATIC))
+                        == (Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL)) {
+                    candidates.put(id, new Candidate(id, Kind.SET_CACHE, "java/util/UUID"));
+                    return;
+                }
                 var types = MAP_TYPES.matcher(field.signature);
                 if (!types.matches()) return;
                 String key = types.group(1);
@@ -501,6 +523,9 @@ public final class CollectionPlan {
                     if (candidate.kind == Kind.SCALAR_LONG) scalarKeys.put(origin, candidate.key);
                 });
                 Origins interpreter = new Origins(returned, scalarKeys);
+                fields.forEach((origin, id) -> {
+                    if (candidates.get(id).kind == Kind.SET_CACHE) interpreter.setCaches.add(origin);
+                });
                 Frame<SourceValue>[] frames = analyze(owner, method, interpreter);
                 if (frames == null || sources.ambiguous(owner.name)) {
                     fields.values().forEach(id -> candidates.get(id).rejected = true);
@@ -554,6 +579,7 @@ public final class CollectionPlan {
                         // Getter callers are analyzed with these same field origins.
                     } else if (instruction instanceof TypeInsnNode cast && cast.getOpcode() == Opcodes.CHECKCAST
                             && (cast.desc.equals("java/util/Map") && id.descriptor.equals(MAP)
+                            || candidate.kind == Kind.SET_CACHE && cast.desc.equals("java/util/Set")
                             || (cast.desc.equals("java/util/List") || cast.desc.equals("java/util/Collection"))
                             && id.descriptor.equals(LIST)
                             || (cast.desc.equals("java/util/Set") || cast.desc.equals("java/util/Collection"))
@@ -566,6 +592,12 @@ public final class CollectionPlan {
 
         private void operation(Candidate candidate, MethodInsnNode call, List<? extends SourceValue> operands,
                                Map<AbstractInsnNode, String> parameterTypes) {
+            if (candidate.kind == Kind.SET_CACHE && call.owner.equals("java/util/Set")
+                    && (call.name + call.desc).equals("contains(Ljava/lang/Object;)Z") && operands.size() == 2) {
+                if (!immutableKey(operands.get(1), "java/lang/String", parameterTypes)) candidate.rejected = true;
+                candidate.operation = true;
+                return;
+            }
             if (candidate.kind == Kind.SCALAR_LONG) {
                 String operation = call.name + call.desc;
                 boolean mapCall = call.owner.equals(LONG_MAP_OWNER) && LONG_OPERATIONS.contains(operation);
@@ -586,7 +618,7 @@ public final class CollectionPlan {
                 return;
             }
             String operation = call.name + call.desc;
-            if (candidate.kind == Kind.CACHE || candidate.kind == Kind.SCALAR_MAP) {
+            if (candidate.kind == Kind.CACHE || candidate.kind == Kind.SET_CACHE || candidate.kind == Kind.SCALAR_MAP) {
                 if (CACHE_READS.contains(operation) || candidate.kind == Kind.SCALAR_MAP
                         && operation.equals("put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")) {
                     if (operands.size() > 1 && !immutableKey(operands.get(1), candidate.key, parameterTypes)) candidate.rejected = true;
@@ -595,7 +627,7 @@ public final class CollectionPlan {
                 }
                 if (!operation.equals(COMPUTE) || operands.size() != 3) { candidate.rejected = true; return; }
                 if (!immutableKey(operands.get(1), candidate.key, parameterTypes)) candidate.rejected = true;
-                Set<Handle> factories = lambdas(operands.get(2));
+                Set<Handle> factories = lambdas(operands.get(2), candidate.kind == Kind.SET_CACHE);
                 if (factories.isEmpty()) candidate.rejected = true;
                 candidate.factories.addAll(factories);
             } else if (candidate.kind == Kind.KEY_SET) {
@@ -606,7 +638,7 @@ public final class CollectionPlan {
             } else {
                 if (!QUEUE_OPERATIONS.contains(operation)) candidate.rejected = true;
                 if (operation.equals("removeIf(Ljava/util/function/Predicate;)Z")) {
-                    Set<Handle> predicates = lambdas(operands.get(1));
+                    Set<Handle> predicates = lambdas(operands.get(1), false);
                     if (predicates.isEmpty() || predicates.stream().anyMatch(handle -> handle.getTag() != Opcodes.H_INVOKESTATIC
                             || !handle.getDesc().equals("(L" + candidate.key + ";)Z"))) candidate.rejected = true;
                     candidate.removal = true;
@@ -630,12 +662,12 @@ public final class CollectionPlan {
             return true;
         }
 
-        private static Set<Handle> lambdas(SourceValue value) {
+        private static Set<Handle> lambdas(SourceValue value, boolean captured) {
             Set<Handle> result = new HashSet<>();
             for (AbstractInsnNode source : value.insns) {
                 if (!(source instanceof InvokeDynamicInsnNode dynamic)
                         || !dynamic.bsm.getOwner().equals("java/lang/invoke/LambdaMetafactory")
-                        || Type.getArgumentTypes(dynamic.desc).length != 0) return Set.of();
+                        || !captured && Type.getArgumentTypes(dynamic.desc).length != 0) return Set.of();
                 for (Object argument : dynamic.bsmArgs) if (argument instanceof Handle handle) result.add(handle);
             }
             return result;
@@ -688,6 +720,7 @@ public final class CollectionPlan {
         final Map<MethodInsnNode, Set<AbstractInsnNode>> returned;
         final Map<AbstractInsnNode, String> scalarKeys;
         final Map<AbstractInsnNode, String> parameterTypes = new IdentityHashMap<>();
+        final Set<AbstractInsnNode> setCaches = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
         Observer observer;
         Origins(Map<MethodInsnNode, Set<AbstractInsnNode>> returned) { this(returned, Map.of()); }
         Origins(Map<MethodInsnNode, Set<AbstractInsnNode>> returned, Map<AbstractInsnNode, String> scalarKeys) {
@@ -720,6 +753,9 @@ public final class CollectionPlan {
                 return new SourceValue(1, returned.get(call));
             if (instruction instanceof MethodInsnNode call && !values.isEmpty()) {
                 SourceValue receiver = values.get(0);
+                if (call.owner.equals("java/util/Map") && ((call.name + call.desc).equals(COMPUTE)
+                        || (call.name + call.desc).equals("get(Ljava/lang/Object;)Ljava/lang/Object;"))
+                        && !receiver.insns.isEmpty() && receiver.insns.stream().allMatch(setCaches::contains)) return receiver;
                 if (!receiver.insns.isEmpty() && receiver.insns.stream().allMatch(scalarKeys::containsKey)) {
                     if (scalarView(call)) return receiver;
                     if (scalarNext(call)) {

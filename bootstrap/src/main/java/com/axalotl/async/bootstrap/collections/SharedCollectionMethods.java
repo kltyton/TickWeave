@@ -9,7 +9,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
-/** Gives singleton multimap operations, including their callers, one cooperative object resource. */
+/** Gives closed shared-collection operations, including their callers, one cooperative object resource. */
 final class SharedCollectionMethods {
     private static final String TASKS = "com/axalotl/async/common/entity/task/SharedObjectTasks";
     private final Map<String, Set<String>> fields;
@@ -45,8 +45,12 @@ final class SharedCollectionMethods {
     int protect(ClassNode node) {
         Set<String> members = fields.get(node.name);
         if (members == null) return 0;
+        return protect(node, members);
+    }
+
+    static int protect(ClassNode node, Set<String> members) {
         if (!EntityCollectionMethods.receiverFields(node, members))
-            throw new IllegalStateException("Shared multimap receiver changed before protection: " + node.name);
+            throw new IllegalStateException("Shared collection receiver changed before protection: " + node.name);
         Set<String> selected = EntityCollectionMethods.selectMethods(node, members);
         int count = 0;
         for (MethodNode method : node.methods) {
@@ -54,7 +58,7 @@ final class SharedCollectionMethods {
                     || (method.access & (Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) != 0
                     || EntityCollectionMethods.guarded(method, TASKS)) continue;
             if ((method.access & Opcodes.ACC_SYNCHRONIZED) != 0)
-                throw new IllegalStateException("Shared multimap monitor changed before protection: " + node.name);
+                throw new IllegalStateException("Shared collection monitor changed before protection: " + node.name);
             EntityCollectionMethods.guard(node.name, method, TASKS);
             count++;
         }
