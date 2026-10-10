@@ -58,7 +58,8 @@ import org.objectweb.asm.tree.FieldNode;
 final class SharedEntityState {
     private enum EmptyCheck { NONE, POTION, DAMAGE_SOURCE, OPTIONAL, IMMUTABLE_COLLECTION, IMMUTABLE_MAP, COLLECTION, MAP, ARRAY }
 
-    private record ScanType(boolean metadata, boolean ownerRead, boolean children, EmptyCheck emptyCheck) {}
+    private record ScanType(boolean metadata, boolean ownerRead, boolean children, EmptyCheck emptyCheck,
+                            FixedStateReferences references) {}
 
     private static final ClassValue<ScanType> TYPES = new ClassValue<>() {
         @Override protected ScanType computeValue(Class<?> type) {
@@ -89,7 +90,9 @@ final class SharedEntityState {
                 else if (Map.class.isAssignableFrom(type)) emptyCheck = EmptyCheck.MAP;
                 else emptyCheck = EmptyCheck.NONE;
             } else emptyCheck = EmptyCheck.NONE;
-            return new ScanType(metadata, ownerRead, children, emptyCheck);
+            FixedStateReferences references = !metadata && !ownerRead && !children && emptyCheck == EmptyCheck.NONE
+                    ? FixedStateReferences.inspect(type, SharedEntityState::isMetadataType) : FixedStateReferences.OPAQUE;
+            return new ScanType(metadata, ownerRead, children, emptyCheck, references);
         }
     };
 
@@ -267,6 +270,8 @@ final class SharedEntityState {
         final References[] shards = new References[32];
         final References deferred = new References();
         final IdentityHashMap<Object, Boolean> expanded = new IdentityHashMap<>();
+        final IdentityHashMap<Object, FixedStateReferences.Values> fixedValues = new IdentityHashMap<>();
+        final IdentityHashMap<Object, Domain> fixedDomains = new IdentityHashMap<>();
         final ArrayDeque<Object> children = new ArrayDeque<>();
         final boolean ownerThread;
 
@@ -306,6 +311,20 @@ final class SharedEntityState {
                 return;
             }
             if (scanType.metadata() || !isMutableValue(value, scanType.emptyCheck())) return;
+            if (scanType.references().fixed()) {
+                FixedStateReferences.Values references = fixedValues.get(value);
+                if (references == null) {
+                    references = scanType.references().read(value);
+                    fixedValues.put(value, references);
+                }
+                if (references.fixed()) {
+                    // A holder can reach the same mutable child from several otherwise independent owners.
+                    if (fixedDomains.put(value, domain) != domain) {
+                        for (Object child : references.references()) if (child != null) children.add(child);
+                    }
+                    return;
+                }
+            }
             int hash = System.identityHashCode(value);
             shards[(hash ^ (hash >>> 16)) & (shards.length - 1)].add(value, domain);
             if (!scanType.children()) return;
@@ -321,6 +340,8 @@ final class SharedEntityState {
 
         private void clearTraversal() {
             expanded.clear();
+            fixedValues.clear();
+            fixedDomains.clear();
             children.clear();
         }
     }
