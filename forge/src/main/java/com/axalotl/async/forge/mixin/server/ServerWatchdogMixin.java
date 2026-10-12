@@ -1,5 +1,7 @@
 package com.axalotl.async.forge.mixin.server;
 
+import com.axalotl.async.common.diagnostics.thread.ThreadDump;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.server.dedicated.ServerWatchdog;
@@ -7,30 +9,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.lang.management.ThreadInfo;
-import java.lang.management.ThreadMXBean;
-import java.util.Map;
 
+/** Retains the watchdog's full failure-time snapshot once, before shutdown can remove workers. */
 @Mixin(ServerWatchdog.class)
 public class ServerWatchdogMixin {
 
-    @Inject(method = "run", at = @At(value = "INVOKE", target = "Lnet/minecraft/CrashReport;addCategory(Ljava/lang/String;)Lnet/minecraft/CrashReportCategory;"), locals = LocalCapture.CAPTURE_FAILSOFT)
-    private void addCustomCrashReport(CallbackInfo ci, long i, long j, long k, ThreadMXBean threadmxbean, ThreadInfo[] athreadinfo, StringBuilder stringbuilder, Error error, CrashReport crashreport){
-        CrashReportCategory threadDumpSection = crashreport.addCategory("Async thread dump");
-        threadDumpSection.setDetail("All Threads", () -> {
-            Map<Thread, StackTraceElement[]> allThreads = Thread.getAllStackTraces();
-            for (Map.Entry<Thread, StackTraceElement[]> entry : allThreads.entrySet()) {
-                Thread t = entry.getKey();
-                stringbuilder.append(String.format("\"%s\" [%s]%n", t.getName(), t.getState()));
-                for (StackTraceElement ste : entry.getValue()) {
-                    stringbuilder.append("\tat ").append(ste).append("\n");
-                }
-                stringbuilder.append("\n");
-            }
-            return stringbuilder.toString();
-        });
+    @Inject(method = "run", at = @At(value = "INVOKE", target = "Lnet/minecraft/CrashReport;addCategory(Ljava/lang/String;)Lnet/minecraft/CrashReportCategory;", ordinal = 0), require = 1)
+    private void addCustomCrashReport(CallbackInfo ci, @Local ThreadInfo[] snapshot, @Local CrashReport report) {
+        CrashReportCategory threadDumpSection = report.addCategory("Async thread dump");
+        threadDumpSection.setDetail("All Threads", ThreadDump.format(snapshot));
     }
 
 }
