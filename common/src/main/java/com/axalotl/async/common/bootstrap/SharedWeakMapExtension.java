@@ -26,25 +26,46 @@ public final class SharedWeakMapExtension implements IExtension {
     private static final int CACHE_FLAGS = Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL;
     private static final String FORGE_ENTITY = "net/minecraft/world/entity/Entity";
     private static final String FABRIC_ENTITY = "net/minecraft/class_1297";
-    private static final ConcurrentHashMap<String, ClassNode> ENTITY_LAYOUTS = new ConcurrentHashMap<>();
-    private static final ClassValue<List<FieldNode>> UNMIXED_LAYOUTS = new ClassValue<>() {
-        @Override protected List<FieldNode> computeValue(Class<?> type) {
+    private static final ConcurrentHashMap<String, ClassNode> CLASS_LAYOUTS = new ConcurrentHashMap<>();
+    private static final ClassValue<ClassNode> UNMIXED_LAYOUTS = new ClassValue<>() {
+        @Override protected ClassNode computeValue(Class<?> type) {
             String resource = "/" + type.getName().replace('.', '/') + ".class";
             try (InputStream input = type.getResourceAsStream(resource)) {
-                if (input == null) throw new IllegalStateException("Entity class resource unavailable: " + type.getName());
+                if (input == null) throw new IllegalStateException("Class layout resource unavailable: " + type.getName());
                 ClassNode node = new ClassNode();
                 new ClassReader(input).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                return List.copyOf(node.fields);
+                return node;
             } catch (IOException failure) {
-                throw new IllegalStateException("Cannot read entity field layout: " + type.getName(), failure);
+                throw new IllegalStateException("Cannot read class layout: " + type.getName(), failure);
             }
         }
     };
 
     public static List<FieldNode> transformedFields(Class<?> type) {
-        ClassNode node = ENTITY_LAYOUTS.get(type.getName().replace('.', '/'));
+        ClassNode node = CLASS_LAYOUTS.get(type.getName().replace('.', '/'));
         // Classes without a Mixin target never enter postApply; field descriptors still remain readable.
-        return node == null ? UNMIXED_LAYOUTS.get(type) : node.fields;
+        return node == null ? UNMIXED_LAYOUTS.get(type).fields : node.fields;
+    }
+
+    /** Native-state detection needs flags, not the unavailable game-side types in method signatures. */
+    public static boolean hasNativeMethods(Class<?> type) {
+        ClassNode node = CLASS_LAYOUTS.get(type.getName().replace('.', '/'));
+        if (node == null) {
+            try {
+                for (var method : type.getDeclaredMethods())
+                    if (java.lang.reflect.Modifier.isNative(method.getModifiers())) return true;
+                return false;
+            } catch (NoClassDefFoundError unavailable) {
+                node = UNMIXED_LAYOUTS.get(type);
+            } catch (RuntimeException failure) {
+                // Fabric rejects environment-stripped signature types before reflection can return a method.
+                String message = failure.getMessage();
+                if (message == null || !message.startsWith("Cannot load class ")
+                        || !message.endsWith(" in environment type SERVER")) throw failure;
+                node = UNMIXED_LAYOUTS.get(type);
+            }
+        }
+        return node.methods.stream().anyMatch(method -> (method.access & Opcodes.ACC_NATIVE) != 0);
     }
 
     public static void register() {
@@ -91,10 +112,14 @@ public final class SharedWeakMapExtension implements IExtension {
         protectInitializers(owner);
         if (ConcurrentTagConstructor.optimize(owner)) LOGGER.debug("Avoided empty NBT map replacement in {}", owner.name);
         ClassInfo info = ClassInfo.forName(owner.name);
-        if (owner.name.equals(FORGE_ENTITY) || owner.name.equals(FABRIC_ENTITY)
+        boolean fixedState = owner.fields.stream().noneMatch(field -> (field.access & Opcodes.ACC_STATIC) == 0
+                && (field.access & Opcodes.ACC_FINAL) == 0)
+                && (owner.fields.stream().anyMatch(field -> (field.access & Opcodes.ACC_STATIC) == 0)
+                || !"java/lang/Object".equals(owner.superName));
+        if (fixedState || owner.name.equals(FORGE_ENTITY) || owner.name.equals(FABRIC_ENTITY)
                 || info != null && (info.hasSuperClass(FORGE_ENTITY) || info.hasSuperClass(FABRIC_ENTITY))) {
             // Retain the live node: later ModLauncher AFTER plugins may still add fields before class definition.
-            ENTITY_LAYOUTS.put(owner.name, owner);
+            CLASS_LAYOUTS.put(owner.name, owner);
         }
     }
 

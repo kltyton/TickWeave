@@ -2,6 +2,7 @@ package com.axalotl.async.common.entity.task;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import com.axalotl.async.common.platform.PlatformUtils;
 import com.axalotl.async.common.ParallelProcessor;
 import com.axalotl.async.common.bootstrap.SharedWeakMapExtension;
@@ -16,6 +17,8 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.IdentityHashMap;
+import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +59,9 @@ import org.objectweb.asm.tree.FieldNode;
 
 /** Keeps direct shared mutable state and nested NBT aliases under a common callback owner. */
 final class SharedEntityState {
+    // Natural orderings only cache equivalent wrappers; they have no independent mutable sort state.
+    private static final Object NATURAL_ORDERING = Ordering.natural();
+    private static final Object REVERSE_NATURAL_ORDERING = Ordering.natural().reverse();
     private enum EmptyCheck { NONE, POTION, DAMAGE_SOURCE, OPTIONAL, IMMUTABLE_COLLECTION, IMMUTABLE_MAP, COLLECTION, MAP, ARRAY }
 
     private record ScanType(boolean metadata, boolean ownerRead, boolean children, EmptyCheck emptyCheck,
@@ -63,6 +69,7 @@ final class SharedEntityState {
 
     private static final ClassValue<ScanType> TYPES = new ClassValue<>() {
         @Override protected ScanType computeValue(Class<?> type) {
+            FixedStateReferences container = FixedStateReferences.container(type);
             boolean metadata = isMetadataType(type) || Entity.class.isAssignableFrom(type)
                     || CooperativeTask.class.isAssignableFrom(type) || Enum.class.isAssignableFrom(type)
                     || type == BlockPos.class || type == SoundType.class
@@ -71,7 +78,7 @@ final class SharedEntityState {
             boolean children = CompoundTag.class.isAssignableFrom(type) || ListTag.class.isAssignableFrom(type)
                     || ByteArrayTag.class.isAssignableFrom(type) || IntArrayTag.class.isAssignableFrom(type)
                     || LongArrayTag.class.isAssignableFrom(type) || ItemStack.class.isAssignableFrom(type);
-            boolean ownerRead = ItemStack.class.isAssignableFrom(type) || type == Potion.class || type == DamageSource.class
+            boolean ownerRead = container.fixed() || ItemStack.class.isAssignableFrom(type) || type == Potion.class || type == DamageSource.class
                     || ImmutableCollection.class.isAssignableFrom(type) || ImmutableMap.class.isAssignableFrom(type)
                     || CompoundTag.class.isAssignableFrom(type) && type != CompoundTag.class
                     || ListTag.class.isAssignableFrom(type) && type != ListTag.class
@@ -90,20 +97,24 @@ final class SharedEntityState {
                 else if (Map.class.isAssignableFrom(type)) emptyCheck = EmptyCheck.MAP;
                 else emptyCheck = EmptyCheck.NONE;
             } else emptyCheck = EmptyCheck.NONE;
-            FixedStateReferences references = !metadata && !ownerRead && !children && emptyCheck == EmptyCheck.NONE
-                    ? FixedStateReferences.inspect(type, SharedEntityState::isMetadataType) : FixedStateReferences.OPAQUE;
+            FixedStateReferences references = container.fixed() ? container
+                    : !metadata && !ownerRead && !children && emptyCheck == EmptyCheck.NONE
+                            ? FixedStateReferences.inspect(type, SharedEntityState::isMetadataType) : FixedStateReferences.OPAQUE;
             return new ScanType(metadata, ownerRead, children, emptyCheck, references);
         }
     };
 
-    private static final ClassValue<MethodHandle[]> FIELDS = new ClassValue<>() {
-        @Override protected MethodHandle[] computeValue(Class<?> type) {
+    private record EntityFields(MethodHandle[] getters, String[] names) {}
+
+    private static final ClassValue<EntityFields> FIELDS = new ClassValue<>() {
+        @Override protected EntityFields computeValue(Class<?> type) {
             ArrayList<MethodHandle> fields = new ArrayList<>();
+            ArrayList<String> names = new ArrayList<>();
             for (Class<?> owner = type; owner != null && Entity.class.isAssignableFrom(owner); owner = owner.getSuperclass()) {
                 Field[] declared;
                 try { declared = owner.getDeclaredFields(); }
                 catch (NoClassDefFoundError missing) {
-                    addTransformedFields(fields, owner, missing);
+                    addTransformedFields(fields, names, owner, missing);
                     continue;
                 }
                 for (Field field : declared) {
@@ -113,13 +124,14 @@ final class SharedEntityState {
                         try {
                             fields.add(MethodHandles.lookup().unreflectGetter(field)
                                     .asType(MethodType.methodType(Object.class, Entity.class)));
+                            names.add(owner.getName() + "." + field.getName());
                         } catch (IllegalAccessException failure) {
                             throw new IllegalStateException("Entity field access changed: " + field, failure);
                         }
                     } else LogManager.getLogger().warn("Cannot inspect shared entity field {}.{}", owner.getName(), field.getName());
                 }
             }
-            return fields.toArray(MethodHandle[]::new);
+            return new EntityFields(fields.toArray(MethodHandle[]::new), names.toArray(String[]::new));
         }
     };
 
@@ -128,7 +140,7 @@ final class SharedEntityState {
                 || CooperativeTask.class.isAssignableFrom(type);
     }
 
-    private static void addTransformedFields(ArrayList<MethodHandle> fields, Class<?> owner,
+    private static void addTransformedFields(ArrayList<MethodHandle> fields, ArrayList<String> names, Class<?> owner,
                                              NoClassDefFoundError reflectionFailure) {
         List<FieldNode> definitions = SharedWeakMapExtension.transformedFields(owner);
         if (definitions == null) {
@@ -155,6 +167,7 @@ final class SharedEntityState {
             try {
                 fields.add(lookup.findGetter(owner, definition.name, fieldType)
                         .asType(MethodType.methodType(Object.class, Entity.class)));
+                names.add(owner.getName() + "." + definition.name);
             } catch (NoSuchFieldException mismatch) {
                 throw new IllegalStateException("Transformed entity field changed: " + owner.getName()
                         + "." + definition.name, mismatch);
@@ -169,14 +182,16 @@ final class SharedEntityState {
 
     private SharedEntityState() {}
 
-    static void bind(Map<Entity, CooperativeTask> owners, Map<Entity, Entity> sources) {
+    static Map<CooperativeTask, Map<String, Integer>> bind(Map<Entity, CooperativeTask> owners,
+                                                        Map<Entity, Entity> sources, boolean recording) {
         Scan scan = SCANS.get();
         if (scan.active) scan = new Scan();
         scan.active = true;
+        scan.recording = recording;
         try {
             IdentityHashMap<CooperativeTask, Domain> domains = scan.domains;
             for (CooperativeTask task : owners.values()) domains.computeIfAbsent(task, Domain::new);
-            if (domains.size() < 2) return;
+            if (domains.size() < 2) return Map.of();
             for (var entry : owners.entrySet()) {
                 scan.entities.add(entry.getKey());
                 scan.entityDomains.add(domains.get(entry.getValue()));
@@ -196,6 +211,7 @@ final class SharedEntityState {
             for (Capture capture : scan.captures) {
                 References deferred = capture.deferred;
                 for (int i = 0; i < deferred.size; i++) {
+                    scan.ownerCapture.origin = deferred.origins == null ? null : deferred.origins[i];
                     scan.ownerCapture.capture(deferred.resources[i], deferred.owners[i]);
                 }
             }
@@ -206,18 +222,29 @@ final class SharedEntityState {
             }
             ParallelProcessor.prepareOwnership(work);
             int remaining = domains.size();
+            List<Binding> bindings = recording ? new ArrayList<>() : null;
             for (var source : sources.entrySet()) {
                 Domain actor = domains.get(owners.get(source.getKey()));
                 Domain owner = domains.get(owners.get(source.getValue()));
-                remaining -= actor.union(owner);
+                int merged = actor.union(owner);
+                remaining -= merged;
+                if (recording && merged != 0) bindings.add(new Binding(actor, "<entity owner>"));
             }
             merge: for (Shard shard : scan.shards) {
                 for (int i = 0; i < shard.size; i++) {
-                    remaining -= shard.owners[i].union((Domain) shard.resources[i]);
+                    int merged = shard.owners[i].union((Domain) shard.resources[i]);
+                    remaining -= merged;
+                    if (recording && merged != 0) bindings.add(new Binding(shard.owners[i], shard.bindings.get(i)));
                     if (remaining == 1) break merge;
                 }
             }
             owners.replaceAll((entity, task) -> domains.get(task).root().task);
+            if (!recording) return Map.of();
+            Map<CooperativeTask, Map<String, Integer>> origins = new IdentityHashMap<>();
+            for (Binding binding : bindings) origins.computeIfAbsent(binding.domain().root().task,
+                    ignored -> new HashMap<>()).merge(binding.origin(), 1, Integer::sum);
+            origins.replaceAll((task, values) -> Map.copyOf(values));
+            return Collections.unmodifiableMap(origins);
         } finally {
             scan.domains.clear();
             scan.entities.clear();
@@ -225,6 +252,7 @@ final class SharedEntityState {
             scan.ownerCapture.clear();
             for (Capture capture : scan.captures) capture.clear();
             for (Shard shard : scan.shards) shard.clear();
+            scan.recording = false;
             scan.active = false;
         }
     }
@@ -237,6 +265,7 @@ final class SharedEntityState {
         final Shard[] shards = new Shard[32];
         final Capture ownerCapture = new Capture(true);
         boolean active;
+        boolean recording;
 
         Scan() {
             Arrays.setAll(captures, ignored -> new Capture(false));
@@ -247,13 +276,21 @@ final class SharedEntityState {
     private static class References {
         Object[] resources = new Object[64];
         Domain[] owners = new Domain[64];
+        String[] origins;
         int size;
 
         void add(Object resource, Domain owner) {
+            add(resource, owner, null);
+        }
+
+        void add(Object resource, Domain owner, String origin) {
             if (size == resources.length) {
                 resources = Arrays.copyOf(resources, size * 2);
                 owners = Arrays.copyOf(owners, size * 2);
+                if (origins != null) origins = Arrays.copyOf(origins, size * 2);
             }
+            if (origin != null && origins == null) origins = new String[resources.length];
+            if (origins != null) origins[size] = origin;
             resources[size] = resource;
             owners[size++] = owner;
         }
@@ -261,6 +298,7 @@ final class SharedEntityState {
         void clear() {
             Arrays.fill(resources, 0, size, null);
             Arrays.fill(owners, 0, size, null);
+            origins = null;
             size = 0;
         }
     }
@@ -274,6 +312,7 @@ final class SharedEntityState {
         final IdentityHashMap<Object, Domain> fixedDomains = new IdentityHashMap<>();
         final ArrayDeque<Object> children = new ArrayDeque<>();
         final boolean ownerThread;
+        String origin;
 
         Capture(boolean ownerThread) {
             this.ownerThread = ownerThread;
@@ -285,9 +324,12 @@ final class SharedEntityState {
                 for (int i = first; i < end; i++) {
                     Entity entity = input.entities.get(i);
                     Domain domain = input.entityDomains.get(i);
-                    for (MethodHandle field : FIELDS.get(entity.getClass())) {
+                    EntityFields layout = FIELDS.get(entity.getClass());
+                    MethodHandle[] getters = layout.getters();
+                    for (int field = 0; field < getters.length; field++) {
+                        origin = input.recording ? layout.names()[field] : null;
                         Object resource;
-                        try { resource = (Object) field.invokeExact(entity); }
+                        try { resource = (Object) getters[field].invokeExact(entity); }
                         catch (RuntimeException | Error failure) { throw failure; }
                         catch (Throwable failure) { throw new IllegalStateException("Cannot read entity ownership state", failure); }
                         if (resource != null) capture(resource, domain);
@@ -305,28 +347,29 @@ final class SharedEntityState {
 
         private void captureOne(Object value, Domain domain) {
             if (value == ItemStack.EMPTY || value == EntityInLevelCallback.NULL || value == TextFilter.DUMMY) return;
+            if (value == NATURAL_ORDERING || value == REVERSE_NATURAL_ORDERING) return;
             ScanType scanType = TYPES.get(value.getClass());
             if (!ownerThread && scanType.ownerRead()) {
-                deferred.add(value, domain);
+                deferred.add(value, domain, origin);
                 return;
             }
-            if (scanType.metadata() || !isMutableValue(value, scanType.emptyCheck())) return;
+            if (scanType.metadata()) return;
+            // Empty sorted containers can still reach a mutable comparator.
+            if (!scanType.references().fixed() && !isMutableValue(value, scanType.emptyCheck())) return;
             if (scanType.references().fixed()) {
                 FixedStateReferences.Values references = fixedValues.get(value);
                 if (references == null) {
                     references = scanType.references().read(value);
                     fixedValues.put(value, references);
                 }
-                if (references.fixed()) {
-                    // A holder can reach the same mutable child from several otherwise independent owners.
-                    if (fixedDomains.put(value, domain) != domain) {
-                        for (Object child : references.references()) if (child != null) children.add(child);
-                    }
-                    return;
+                // Expand for each owner, including holders whose entity references keep them opaque.
+                if (fixedDomains.put(value, domain) != domain) {
+                    for (Object child : references.references()) if (child != null) children.add(child);
                 }
+                if (references.fixed()) return;
             }
             int hash = System.identityHashCode(value);
-            shards[(hash ^ (hash >>> 16)) & (shards.length - 1)].add(value, domain);
+            shards[(hash ^ (hash >>> 16)) & (shards.length - 1)].add(value, domain, origin);
             if (!scanType.children()) return;
             // Keep every ownership edge, but expand each local shared/cyclic topology only once.
             if (expanded.put(value, Boolean.TRUE) == null) addTagChildren(value, children);
@@ -343,26 +386,47 @@ final class SharedEntityState {
             fixedValues.clear();
             fixedDomains.clear();
             children.clear();
+            origin = null;
         }
     }
 
     /** Workers see references and domains only; no entity, collection or mod methods are called here. */
     private static final class Shard extends References {
         final IdentityHashMap<Object, Domain> index = new IdentityHashMap<>();
+        List<String> bindings;
+        IdentityHashMap<Object, String> provenance;
+        IdentityHashMap<Object, String> originFields;
 
         void index(Scan input, int shard) {
-            index(input.ownerCapture.shards[shard]);
-            for (Capture capture : input.captures) index(capture.shards[shard]);
+            index(input.ownerCapture.shards[shard], input.recording, shard);
+            for (Capture capture : input.captures) index(capture.shards[shard], input.recording, shard);
             index.clear();
         }
 
-        private void index(References input) {
+        private void index(References input, boolean recording, int shard) {
             try {
                 for (int i = 0; i < input.size; i++) {
                     Domain owner = input.owners[i];
                     Domain previous = index.put(input.resources[i], owner);
+                    String field = null;
+                    String previousField = null;
+                    if (recording) {
+                        if (originFields == null) originFields = new IdentityHashMap<>();
+                        field = input.origins == null ? "<direct capture>" : input.origins[i];
+                        previousField = originFields.put(input.resources[i], field);
+                    }
                     if (previous != null && previous != owner) {
                         add(previous, owner);
+                        if (recording) {
+                            if (bindings == null) bindings = new ArrayList<>();
+                            if (provenance == null) provenance = new IdentityHashMap<>();
+                            String identity = provenance.get(input.resources[i]);
+                            if (identity == null) {
+                                identity = input.resources[i].getClass().getName() + "@s" + shard + ":r" + provenance.size();
+                                provenance.put(input.resources[i], identity);
+                            }
+                            bindings.add(identity + " {" + previousField + " <-> " + field + "}");
+                        }
                     }
                 }
             } finally {
@@ -372,9 +436,14 @@ final class SharedEntityState {
 
         @Override void clear() {
             index.clear();
+            bindings = null;
+            provenance = null;
+            originFields = null;
             super.clear();
         }
     }
+
+    private record Binding(Domain domain, String origin) {}
 
     private static boolean isMetadataType(Class<?> type) {
         return type == String.class || type == UUID.class || type.isEnum() || type == Class.class

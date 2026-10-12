@@ -64,13 +64,16 @@ public final class CollectionPlan {
     private final EntityCollectionMethods entityMethods;
     private final SharedCollectionMethods sharedMethods;
     private final InventoryThreadMethods inventoryMethods;
+    private final ConfigurationSnapshots configurationSnapshots;
 
     private CollectionPlan(Map<String, List<Rule>> rules, EntityCollectionMethods entityMethods,
-                           SharedCollectionMethods sharedMethods, InventoryThreadMethods inventoryMethods) {
+                            SharedCollectionMethods sharedMethods, InventoryThreadMethods inventoryMethods,
+                            ConfigurationSnapshots configurationSnapshots) {
         this.rules = Map.copyOf(rules);
         this.entityMethods = entityMethods;
         this.sharedMethods = sharedMethods;
         this.inventoryMethods = inventoryMethods;
+        this.configurationSnapshots = configurationSnapshots;
     }
 
     public static CollectionPlan scan(List<Path> roots, String entityBase, String attributeBase) throws IOException {
@@ -82,6 +85,7 @@ public final class CollectionPlan {
         targets.addAll(entityMethods.targets());
         targets.addAll(sharedMethods.targets());
         targets.addAll(inventoryMethods.targets());
+        targets.addAll(configurationSnapshots.targets());
         return Set.copyOf(targets);
     }
 
@@ -90,12 +94,13 @@ public final class CollectionPlan {
         return selected != null && !selected.isEmpty()
                 && selected.stream().allMatch(rule -> rule.kind == Kind.SCALAR_MAP || rule.kind == Kind.SCALAR_LONG)
                 && !entityMethods.targets().contains(target) && !sharedMethods.targets().contains(target)
-                && !inventoryMethods.targets().contains(target);
+                && !inventoryMethods.targets().contains(target) && !configurationSnapshots.targets().contains(target);
     }
 
-    /** Retains the original HashMap/WeakHashMap/ArrayList, including null and callback behavior. */
+    /** Protects mutable collection operations and fixes copied configuration-list membership. */
     public int protect(ClassNode target) {
-        int wrapped = entityMethods.protect(target) + sharedMethods.protect(target) + inventoryMethods.protect(target);
+        int wrapped = configurationSnapshots.apply(target) + entityMethods.protect(target)
+                + sharedMethods.protect(target) + inventoryMethods.protect(target);
         for (Rule rule : rules.getOrDefault(target.name, List.of())) {
             List<Store> stores = new ArrayList<>();
             boolean matched = true;
@@ -263,7 +268,8 @@ public final class CollectionPlan {
             }
             result.replaceAll((owner, selected) -> List.copyOf(selected));
             return new CollectionPlan(result, EntityCollectionMethods.scan(sources, entityBase),
-                    SharedCollectionMethods.scan(sources, entityBase), InventoryThreadMethods.scan(sources));
+                    SharedCollectionMethods.scan(sources, entityBase), InventoryThreadMethods.scan(sources),
+                    ConfigurationSnapshots.scan(sources));
         }
 
         private void select(ClassNode owner, FieldNode field) throws IOException {

@@ -1,5 +1,6 @@
 package com.axalotl.async.common.utils;
 
+import com.axalotl.async.common.diagnostics.entity.EntityBatchStats;
 import net.minecraft.world.entity.EntityType;
 
 import java.util.Map;
@@ -14,9 +15,11 @@ public class TickStats {
     public static final Map<EntityType<?>, LongAdder> ASYNC_TICK_COUNT = new ConcurrentHashMap<>();
     public static final AtomicInteger RECORDING_TICKS_LEFT = new AtomicInteger(0);
     private static Runnable recordingFinished;
+    private static volatile EntityBatchStats entityBatches;
 
     public static void startRecording(int ticks) {
         clean();
+        entityBatches = new EntityBatchStats();
         RECORDING_TICKS_LEFT.set(ticks);
     }
 
@@ -44,6 +47,9 @@ public class TickStats {
         return RECORDING_TICKS_LEFT.get() > 0;
     }
 
+    public static EntityBatchStats recordingBatches() { return isRecording() ? entityBatches : null; }
+    public static EntityBatchStats recordedBatches() { return entityBatches; }
+
     public static double getMSPTForType(EntityType<?> type, int recordedTicks) {
         if (recordedTicks <= 0) return 0;
 
@@ -70,5 +76,6 @@ public class TickStats {
         ASYNC_TICK_COUNT.clear();
         RECORDING_TICKS_LEFT.set(0);
         recordingFinished = null;
+        entityBatches = null;
     }
 }

@@ -2,6 +2,7 @@ package com.axalotl.async.common.commands;
 
 import com.axalotl.async.common.ParallelProcessor;
 import com.axalotl.async.common.config.AsyncConfig;
+import com.axalotl.async.common.diagnostics.entity.EntityBatchStats;
 import com.axalotl.async.common.platform.Permission;
 import com.axalotl.async.common.utils.EntityTickCircuitBreaker;
 import com.axalotl.async.common.utils.TickStats;
@@ -10,6 +11,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -21,10 +24,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import static com.axalotl.async.common.ParallelProcessor.getPoolSize;
 
 public class StatsCommand {
+    private static final Logger LOGGER = LogManager.getLogger();
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#,##0.##");
 
     public static LiteralArgumentBuilder<CommandSourceStack> registerStatus(
@@ -225,9 +231,57 @@ public class StatsCommand {
                         });
             }
 
-            if (showTickStats) TickStats.resetEntityTickStats();
+            if (showTickStats) {
+                appendBatchStats(message, TickStats.recordedBatches(), topCount);
+                // RCON sends its reply before the sample completes and clears that buffer for the next command.
+                LOGGER.info("{}", message.getString());
+                TickStats.resetEntityTickStats();
+            }
             source.sendSuccess(() -> message, false);
         });
+    }
+
+    private static void appendBatchStats(MutableComponent message, EntityBatchStats statistics, int limit) {
+        if (statistics == null) return;
+        message.append(Component.translatableWithFallback("tickweave.stats.batch.title",
+                "\n\nBatch statistics (group wall time includes waits):").withStyle(ChatFormatting.GOLD));
+        for (EntityBatchStats.Kind kind : EntityBatchStats.Kind.values()) {
+            EntityBatchStats.Summary summary = statistics.summary(kind);
+            if (summary.batches() == 0) continue;
+            Component phase = Component.translatableWithFallback("tickweave.stats.batch." + kind.name().toLowerCase(Locale.ROOT),
+                    kind == EntityBatchStats.Kind.ENTITY ? "Entities" : "Connections");
+            message.append(Component.translatableWithFallback("tickweave.stats.batch.phase",
+                    "\n%s: %s batches, %s groups/batch", phase, summary.batches(),
+                    String.format(Locale.ROOT, "%.2f", (double) summary.groups() / summary.batches())));
+            if (summary.largest() != null) {
+                message.append(Component.translatableWithFallback("tickweave.stats.batch.largest", "\nLargest group: "));
+                appendGroupInfo(message, summary.largest(), limit);
+            }
+            EntityBatchStats.Timing slowest = summary.slowest();
+            if (slowest != null) {
+                message.append(Component.translatableWithFallback("tickweave.stats.batch.slowest",
+                        "\nSlowest group: %s ms; ", String.format(Locale.ROOT, "%.3f", slowest.nanos() / 1_000_000.0)));
+                appendGroupInfo(message, slowest.info(), limit);
+            }
+        }
+    }
+
+    private static void appendGroupInfo(MutableComponent message, EntityBatchStats.Info group, int limit) {
+        message.append(Component.translatableWithFallback("tickweave.stats.batch.group",
+                "Batch %s, %s; %s/%s entries, %s groups", group.batch(), group.world(), group.entries(),
+                group.totalEntries(), group.groups()));
+        message.append(Component.translatableWithFallback("tickweave.stats.batch.members",
+                "\n  Classes: %s", formatCounts(group.members(), limit)));
+        message.append(Component.translatableWithFallback("tickweave.stats.batch.actors",
+                "\n  Entity IDs: %s", group.actors().toString()));
+        message.append(Component.translatableWithFallback("tickweave.stats.batch.bindings",
+                "\n  Component-changing merge links: %s", formatCounts(group.bindings(), limit)));
+    }
+
+    private static String formatCounts(Map<String, Integer> values, int limit) {
+        return values.entrySet().stream().sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
+                        .thenComparing(Map.Entry.comparingByKey())).limit(limit)
+                .map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
     }
 
     private static ChatFormatting getMsptColor(double mspt) {

@@ -1,6 +1,7 @@
 package com.axalotl.async.common;
 
 import com.axalotl.async.common.config.AsyncConfig;
+import com.axalotl.async.common.diagnostics.entity.EntityBatchStats;
 import com.axalotl.async.common.entity.task.CooperativeTask;
 import com.axalotl.async.common.entity.task.EntityTasks;
 import com.axalotl.async.common.utils.EntityTickCircuitBreaker;
@@ -125,6 +126,7 @@ public class ParallelProcessor {
             ticking.addAll(entities);
             List<Runnable> work = new ArrayList<>();
             for (EntityTasks.Group group : EntityTasks.groups(all)) {
+                EntityBatchStats.Group statistics = EntityTasks.groupStatistics(group);
                 work.add(() ->
                         ENTITY_TICK_COST.measure(group.roots().size(), () ->
                                 EntityTasks.run(group.roots().get(0), () -> {
@@ -133,7 +135,7 @@ public class ParallelProcessor {
                                         if (ticking.contains(entity) && !entity.isRemoved()
                                                 && entity.level() == world && !entity.isPassenger()) tickEntity(world, entity);
                                     }
-                                })));
+                                }), statistics));
             }
             runEntitySchedule(work);
         } finally {
@@ -422,10 +424,17 @@ public class ParallelProcessor {
         try {
             List<Runnable> work = new ArrayList<>();
             for (EntityTasks.Group group : EntityTasks.groups(players)) {
-                work.add(() ->
+                EntityBatchStats.Group statistics = EntityTasks.groupStatistics(group);
+                work.add(() -> {
+                    long start = statistics == null ? 0 : System.nanoTime();
+                    try {
                         EntityTasks.run(group.roots().get(0), () -> {
                             for (Entity player : group.roots()) actions.get(player).forEach(Runnable::run);
-                        }));
+                        });
+                    } finally {
+                        if (statistics != null) statistics.complete(System.nanoTime() - start);
+                    }
+                });
             }
             runEntitySchedule(work);
         } finally {
@@ -489,13 +498,19 @@ public class ParallelProcessor {
         }
 
         public void measure(int count, Runnable task) {
+            measure(count, task, null);
+        }
+
+        private void measure(int count, Runnable task, EntityBatchStats.Group statistics) {
             if (count == 0) return;
             long start = System.nanoTime();
             try {
                 task.run();
             } finally {
-                nanos.add(System.nanoTime() - start);
+                long elapsed = System.nanoTime() - start;
+                nanos.add(elapsed);
                 items.add(count);
+                if (statistics != null) statistics.complete(elapsed);
             }
         }
 

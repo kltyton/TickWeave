@@ -1,0 +1,12 @@
+{
+  "tickweave.stats.batch.title": "\n\nBatch statistics (group wall time includes waits):",
+  "tickweave.stats.batch.entity": "Entities",
+  "tickweave.stats.batch.connection": "Connections",
+  "tickweave.stats.batch.phase": "\n%s: %s batches, %s groups/batch",
+  "tickweave.stats.batch.largest": "\nLargest group: ",
+  "tickweave.stats.batch.slowest": "\nSlowest group: %s ms; ",
+  "tickweave.stats.batch.group": "Batch %s, %s; %s/%s entries, %s groups",
+  "tickweave.stats.batch.members": "\n  Classes: %s",
+  "tickweave.stats.batch.actors": "\n  Entity IDs: %s",
+  "tickweave.stats.batch.bindings": "\n  Component-changing merge links: %s"
+}

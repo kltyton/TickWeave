@@ -1,0 +1,12 @@
+{
+  "tickweave.stats.batch.title": "\n\n批次统计（组墙钟耗时包含等待）：",
+  "tickweave.stats.batch.entity": "实体",
+  "tickweave.stats.batch.connection": "连接",
+  "tickweave.stats.batch.phase": "\n%s：%s 批次，平均每批 %s 组",
+  "tickweave.stats.batch.largest": "\n最大组：",
+  "tickweave.stats.batch.slowest": "\n最慢组：%s ms；",
+  "tickweave.stats.batch.group": "批次 %s，%s；%s/%s 条目，共 %s 组",
+  "tickweave.stats.batch.members": "\n  实体类：%s",
+  "tickweave.stats.batch.actors": "\n  实体 ID：%s",
+  "tickweave.stats.batch.bindings": "\n  改变连通分量的合并连接：%s"
+}

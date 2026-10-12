@@ -1,6 +1,8 @@
 package com.axalotl.async.common.entity.task;
 
 import com.axalotl.async.common.ParallelProcessor;
+import com.axalotl.async.common.diagnostics.entity.EntityBatchStats;
+import com.axalotl.async.common.utils.TickStats;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Collection;
@@ -9,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -42,8 +45,9 @@ public final class EntityTasks {
                 if (!entity.isRemoved()) bind(entity.getRootVehicle(), owners, sources);
             }
         }
-        SharedEntityState.bind(owners, sources);
-        active = new Batch(world, owners);
+        EntityBatchStats recording = TickStats.recordingBatches();
+        var bindings = SharedEntityState.bind(owners, sources, recording != null);
+        active = new Batch(world, owners, recording, recording == null ? 0 : recording.nextBatch(), bindings);
     }
 
     private static void bind(Entity root, Map<Entity, CooperativeTask> owners, Map<Entity, Entity> sources) {
@@ -85,7 +89,28 @@ public final class EntityTasks {
         for (Entity entity : entities) roots.computeIfAbsent(task(entity), ignored -> new ArrayList<>()).add(entity);
         List<Group> groups = new ArrayList<>(roots.size());
         roots.forEach((owner, actors) -> groups.add(new Group(actors)));
+        Batch batch = active;
+        if (batch.recording != null) {
+            batch.groupCount = groups.size();
+            batch.entries = entities.size();
+            batch.recording.recordBatch(batch.kind(), groups.size());
+        }
         return groups;
+    }
+
+    public static EntityBatchStats.Group groupStatistics(Group group) {
+        Batch batch = active;
+        if (batch.recording == null) return null;
+        Map<String, Integer> members = new TreeMap<>();
+        List<Integer> actors = new ArrayList<>(group.roots().size());
+        for (Entity entity : group.roots()) {
+            members.merge(entity.getClass().getName(), 1, Integer::sum);
+            actors.add(entity.getId());
+        }
+        String world = batch.world == null ? "<connection phase>" : batch.world.dimension().location().toString();
+        return batch.recording.recordGroup(batch.kind(), batch.sequence, world, batch.groupCount, batch.entries,
+                group.roots().size(), members, actors,
+                batch.bindings.getOrDefault(batch.owner(group.roots().get(0)), Map.of()));
     }
 
     public record Group(List<Entity> roots) {}
@@ -209,16 +234,29 @@ public final class EntityTasks {
     private static final class Batch {
         final ServerLevel world;
         final Map<Entity, CooperativeTask> owners;
+        final EntityBatchStats recording;
+        final long sequence;
+        final Map<CooperativeTask, Map<String, Integer>> bindings;
+        int groupCount;
+        int entries;
         final Map<CooperativeTask, CooperativeTask> connections = new IdentityHashMap<>();
         final Set<Entity> ticked = ConcurrentHashMap.newKeySet();
 
-        Batch(ServerLevel world, Map<Entity, CooperativeTask> owners) {
+        Batch(ServerLevel world, Map<Entity, CooperativeTask> owners, EntityBatchStats recording, long sequence,
+              Map<CooperativeTask, Map<String, Integer>> bindings) {
             this.world = world;
             this.owners = owners;
+            this.recording = recording;
+            this.sequence = sequence;
+            this.bindings = bindings;
             owners.forEach((entity, owner) -> {
                 if (entity instanceof ServerPlayer player && player.connection != null)
                     connections.put(ownTask(player), owner);
             });
+        }
+
+        EntityBatchStats.Kind kind() {
+            return world == null ? EntityBatchStats.Kind.CONNECTION : EntityBatchStats.Kind.ENTITY;
         }
 
         CooperativeTask owner(Entity entity) {
