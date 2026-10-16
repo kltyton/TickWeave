@@ -9,7 +9,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ChunkPos;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(value={ServerPlayer.class})
 public abstract class ServerPlayerMixin
@@ -21,6 +23,19 @@ extends Player {
     @WrapMethod(method={"die"})
     private void onDead(DamageSource damageSource, Operation<Void> original) {
         EntityTasks.damage(this, damageSource, () -> original.call(damageSource));
+    }
+
+    @Unique
+    private void tickweave$chunkDelivery(Runnable operation) {
+        EntityTasks.onMain(() -> EntityTasks.onThread(this, () -> {
+            operation.run();
+            return null;
+        }));
+    }
+
+    @WrapMethod(method = "untrackChunk")
+    private void tickweave$untrackChunk(ChunkPos position, Operation<Void> original) {
+        tickweave$chunkDelivery(() -> original.call(position));
     }
 }
 
