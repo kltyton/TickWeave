@@ -1,6 +1,7 @@
 package com.axalotl.async.bootstrap.forge;
 
 import com.axalotl.async.bootstrap.collections.CollectionPlan;
+import com.axalotl.async.bootstrap.network.PlayerConnectionPlan;
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
@@ -13,6 +14,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,9 +65,15 @@ public final class ForgeCollectionBootstrap extends AbstractJarFileModProvider
         if (mods == null) throw new IllegalStateException("Forge mod discovery is incomplete during transformer registration");
         List<Path> roots = mods.getModFiles().stream().map(info -> info.getFile().getSecureJar().getRootPath()).distinct().toList();
         try {
+            PlayerConnectionPlan connectionPlan = new PlayerConnectionPlan(roots,
+                    "net/minecraft/server/level/ServerPlayer",
+                    "net/minecraft/server/network/ServerGamePacketListenerImpl",
+                    "net/minecraft/network/Connection");
             CollectionPlan plan = CollectionPlan.scan(roots, "net/minecraft/world/entity/Entity",
-                    "net/minecraft/world/entity/ai/attributes/Attribute");
-            return plan.targets().isEmpty() ? List.of() : List.of(new PlannedTransformer(plan));
+                    "net/minecraft/world/entity/ai/attributes/Attribute", connectionPlan.observer());
+            Set<String> names = new HashSet<>(plan.targets());
+            names.addAll(connectionPlan.targets());
+            return names.isEmpty() ? List.of() : List.of(new PlannedTransformer(plan, connectionPlan, names));
         } catch (IOException failure) {
             throw new IllegalStateException("Cannot inspect Forge shared collection access", failure);
         }
@@ -73,12 +81,18 @@ public final class ForgeCollectionBootstrap extends AbstractJarFileModProvider
 
     private static final class PlannedTransformer implements ITransformer<ClassNode> {
         private final CollectionPlan plan;
+        private final PlayerConnectionPlan connectionPlan;
         private final Set<Target> targets;
-        PlannedTransformer(CollectionPlan plan) {
+        PlannedTransformer(CollectionPlan plan, PlayerConnectionPlan connectionPlan, Set<String> names) {
             this.plan = plan;
-            this.targets = plan.targets().stream().map(name -> Target.targetClass(name.replace('/', '.'))).collect(Collectors.toUnmodifiableSet());
+            this.connectionPlan = connectionPlan;
+            this.targets = names.stream().map(name -> Target.targetClass(name.replace('/', '.'))).collect(Collectors.toUnmodifiableSet());
         }
-        @Override public ClassNode transform(ClassNode input, ITransformerVotingContext context) { plan.protect(input); return input; }
+        @Override public ClassNode transform(ClassNode input, ITransformerVotingContext context) {
+            plan.protect(input);
+            connectionPlan.protect(input);
+            return input;
+        }
         @Override public TransformerVoteResult castVote(ITransformerVotingContext context) { return TransformerVoteResult.YES; }
         @Override public Set<Target> targets() { return targets; }
     }

@@ -1,11 +1,13 @@
 package com.axalotl.async.fabric.bootstrap;
 
 import com.axalotl.async.bootstrap.collections.CollectionPlan;
+import com.axalotl.async.bootstrap.network.PlayerConnectionPlan;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import net.fabricmc.loader.api.FabricLoader;
@@ -21,6 +23,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 public final class FabricCollectionPlugin implements IMixinConfigPlugin {
     private static final System.Logger LOGGER = System.getLogger("TickWeave/Collections");
     private CollectionPlan plan;
+    private PlayerConnectionPlan connectionPlan;
     private List<String> mixins = List.of();
     private final List<Path> generatedFiles = new ArrayList<>();
     private final List<Path> generatedDirectories = new ArrayList<>();
@@ -30,15 +33,22 @@ public final class FabricCollectionPlugin implements IMixinConfigPlugin {
             FabricLoader loader = FabricLoader.getInstance();
             List<Path> roots = loader.getAllMods().stream().flatMap(mod -> mod.getRootPaths().stream()).distinct().toList();
             var mappings = loader.getMappingResolver();
+            connectionPlan = new PlayerConnectionPlan(roots,
+                    mappings.mapClassName("intermediary", "net.minecraft.class_3222").replace('.', '/'),
+                    mappings.mapClassName("intermediary", "net.minecraft.class_3244").replace('.', '/'),
+                    mappings.mapClassName("intermediary", "net.minecraft.class_2535").replace('.', '/'));
             plan = CollectionPlan.scan(roots,
                     mappings.mapClassName("intermediary", "net.minecraft.class_1297").replace('.', '/'),
-                    mappings.mapClassName("intermediary", "net.minecraft.class_1320").replace('.', '/'));
-            if (plan.targets().isEmpty()) return;
+                    mappings.mapClassName("intermediary", "net.minecraft.class_1320").replace('.', '/'),
+                    connectionPlan.observer());
+            Set<String> allTargets = new HashSet<>(plan.targets());
+            allTargets.addAll(connectionPlan.targets());
+            if (allTargets.isEmpty()) return;
             var launcher = FabricLauncherBase.getLauncher();
             List<String> pendingTargets = new ArrayList<>();
-            for (String target : plan.targets()) {
+            for (String target : allTargets) {
                 if (launcher.isClassLoaded(target.replace('/', '.'))) {
-                    if (!plan.isScalarCollectionOnly(target))
+                    if (!plan.isScalarCollectionOnly(target) || connectionPlan.targets().contains(target))
                         throw new IllegalStateException("Entity/shared-object target was loaded before Mixin preparation: " + target);
                     LOGGER.log(System.Logger.Level.WARNING,
                             "Already-loaded scalar collection class retains its original storage: {0}", target);
@@ -104,5 +114,8 @@ public final class FabricCollectionPlugin implements IMixinConfigPlugin {
     @Override public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}
     @Override public List<String> getMixins() { return mixins; }
     @Override public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) {}
-    @Override public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) { plan.protect(targetClass); }
+    @Override public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo info) {
+        plan.protect(targetClass);
+        connectionPlan.protect(targetClass);
+    }
 }

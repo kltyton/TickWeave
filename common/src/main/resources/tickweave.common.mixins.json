@@ -6,6 +6,7 @@
   "refmap": "tickweave.refmap.json",
   "mixins": [
     "server.PlayerPacketDispatchMixin",
+    "server.PlayerLoginMixin",
     "server.PlayerBlockBreakMixin",
     "compat.BlueprintEntityMixin",
     "compat.RhinoContextMixin",

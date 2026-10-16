@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
@@ -76,8 +77,13 @@ public final class CollectionPlan {
         this.configurationSnapshots = configurationSnapshots;
     }
 
-    public static CollectionPlan scan(List<Path> roots, String entityBase, String attributeBase) throws IOException {
-        return new Scan(new CollectionSources(roots), entityBase, attributeBase).run();
+    /**
+     * Reads loader-selected class roots once. The optional observer receives every fully read class
+     * node so independent plans can inspect the same bytes without a second whole-class scan.
+     */
+    public static CollectionPlan scan(List<Path> roots, String entityBase, String attributeBase,
+                                      Consumer<ClassNode> observer) throws IOException {
+        return new Scan(new CollectionSources(roots), entityBase, attributeBase, observer).run();
     }
 
     public Set<String> targets() {
@@ -204,16 +210,18 @@ public final class CollectionPlan {
         final CollectionSources sources;
         final String entityBase;
         final String attributeBase;
+        final Consumer<ClassNode> observer;
         final Map<FieldId, Candidate> candidates = new LinkedHashMap<>();
         final Map<FieldId, FieldId> canonical = new HashMap<>();
         final Map<MethodId, Set<FieldId>> getters = new HashMap<>();
         final Map<MethodId, Set<FieldId>> calls = new HashMap<>();
         final Set<String> staticReferences = new HashSet<>();
 
-        Scan(CollectionSources sources, String entityBase, String attributeBase) {
+        Scan(CollectionSources sources, String entityBase, String attributeBase, Consumer<ClassNode> observer) {
             this.sources = sources;
             this.entityBase = entityBase;
             this.attributeBase = attributeBase;
+            this.observer = observer;
         }
 
         CollectionPlan run() throws IOException {
@@ -239,7 +247,10 @@ public final class CollectionPlan {
             }
             for (Path path : sources.paths()) {
                 ClassNode node = sources.read(path);
-                if (node != null) inspect(node);
+                if (node != null) {
+                    inspect(node);
+                    if (observer != null) observer.accept(node);
+                }
             }
             CacheConstructor constructors = new CacheConstructor(sources);
             Map<String, List<Rule>> result = new TreeMap<>();
