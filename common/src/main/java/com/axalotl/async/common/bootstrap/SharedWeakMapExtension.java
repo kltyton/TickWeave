@@ -50,21 +50,7 @@ public final class SharedWeakMapExtension implements IExtension {
     /** Native-state detection needs flags, not the unavailable game-side types in method signatures. */
     public static boolean hasNativeMethods(Class<?> type) {
         ClassNode node = CLASS_LAYOUTS.get(type.getName().replace('.', '/'));
-        if (node == null) {
-            try {
-                for (var method : type.getDeclaredMethods())
-                    if (java.lang.reflect.Modifier.isNative(method.getModifiers())) return true;
-                return false;
-            } catch (NoClassDefFoundError unavailable) {
-                node = UNMIXED_LAYOUTS.get(type);
-            } catch (RuntimeException failure) {
-                // Fabric rejects environment-stripped signature types before reflection can return a method.
-                String message = failure.getMessage();
-                if (message == null || !message.startsWith("Cannot load class ")
-                        || !message.endsWith(" in environment type SERVER")) throw failure;
-                node = UNMIXED_LAYOUTS.get(type);
-            }
-        }
+        if (node == null) node = UNMIXED_LAYOUTS.get(type);
         return node.methods.stream().anyMatch(method -> (method.access & Opcodes.ACC_NATIVE) != 0);
     }
 
