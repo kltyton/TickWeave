@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.IExtension;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.service.ISyntheticClassRegistry;
 
 import java.util.List;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class SharedWeakMapExtension implements IExtension {
+    private final ISyntheticClassRegistry generatedClasses;
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int CACHE_FLAGS = Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL;
     private static final String FORGE_ENTITY = "net/minecraft/world/entity/Entity";
@@ -40,6 +42,10 @@ public final class SharedWeakMapExtension implements IExtension {
             }
         }
     };
+
+    private SharedWeakMapExtension(ISyntheticClassRegistry generatedClasses) {
+        this.generatedClasses = generatedClasses;
+    }
 
     public static List<FieldNode> transformedFields(Class<?> type) {
         ClassNode node = CLASS_LAYOUTS.get(type.getName().replace('.', '/'));
@@ -62,7 +68,7 @@ public final class SharedWeakMapExtension implements IExtension {
             throw new IllegalStateException("TickWeave requires the Mixin extension registry");
         }
         if (extensions.getExtensions().stream().noneMatch(SharedWeakMapExtension.class::isInstance)) {
-            extensions.add(new SharedWeakMapExtension());
+            extensions.add(new SharedWeakMapExtension(extensions.getSyntheticClassRegistry()));
         }
         if (extensions.getExtensions().stream().noneMatch(CollisionFilterExtension.class::isInstance)) {
             extensions.add(new CollisionFilterExtension());
@@ -141,5 +147,9 @@ public final class SharedWeakMapExtension implements IExtension {
 
     @Override
     public void export(MixinEnvironment environment, String name, boolean force, ClassNode classNode) {
+        // Generated classes must publish their live layout before class definition.
+        if (generatedClasses.findSyntheticClass(classNode.name) != null) {
+            CLASS_LAYOUTS.put(classNode.name, classNode);
+        }
     }
 }
