@@ -7,7 +7,8 @@ import org.apache.logging.log4j.Logger;
 public abstract class AsyncCommon {
     public static final String MODID = "tickweave";
     private static final Logger LOGGER = LogManager.getLogger("TickWeave");
-    public static boolean LITHIUM = PlatformUtils.isModLoaded("lithium") || PlatformUtils.isModLoaded("harium");
+    public static boolean LITHIUM = PlatformUtils.isModLoaded("lithium") || PlatformUtils.isModLoaded("harium")
+            || PlatformUtils.isModLoaded("radium");
     public static boolean HARIPLAYER = PlatformUtils.isModLoaded("hariplayer") || PlatformUtils.isModLoaded("vmp");
     public static boolean HARICHUNK = PlatformUtils.isModLoaded("harichunk") || PlatformUtils.isModLoaded("c2me");
 
@@ -19,7 +20,7 @@ public abstract class AsyncCommon {
     private static void logCompatibilityStatus() {
         LOGGER.info("=== TickWeave Mod Compatibility ===");
         if (LITHIUM) {
-            LOGGER.info("Detected: Harium/Lithium - Adjusted entity AI optimizations");
+            LOGGER.info("Detected: Harium/Lithium/Radium - Adjusted entity AI optimizations");
             LOGGER.info("  -> Enabled RadiumServerLevel compat mixin");
             LOGGER.info("  -> SyncAllMixin will provide thread safety for optimized collections");
         }
