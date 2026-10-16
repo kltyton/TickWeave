@@ -1,5 +1,6 @@
 package com.axalotl.async.common.mixin.entity;
 
+import com.axalotl.async.common.entity.interaction.ItemPickup;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.world.entity.EntityType;
@@ -20,17 +21,10 @@ extends WaterAnimal {
         super(entityType, world);
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
+    /** The item and collector must be owned before entering the pickup monitor. */
     @WrapMethod(method={"pickUpItem"})
     private void pickUpItem(ItemEntity item, Operation<Void> original) {
-        Object object = async$lock;
-        synchronized (object) {
-            if (!item.isRemoved()) {
-                original.call(new Object[]{item});
-            }
-        }
+        ItemPickup.run(this, item, async$lock, () -> original.call(item));
     }
 }
 
