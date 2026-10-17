@@ -3,6 +3,7 @@ package com.axalotl.async.common.mixin.entity;
 import com.axalotl.async.common.entity.task.EntityTasks;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -16,6 +17,16 @@ public class PlayerInteractionMixin {
     @WrapMethod(method = {"touch", "attack"})
     private void tickweave$interaction(Entity target, Operation<Void> original) {
         EntityTasks.call((Player) (Object) this, target, () -> original.call(target));
+    }
+
+    /** Keeps the native world RNG sequence and the resulting world sound on the world thread. */
+    @WrapMethod(method = "playShoulderEntityAmbientSound")
+    private void tickweave$worldAmbientSound(CompoundTag tag, Operation<Void> original) {
+        Player player = (Player) (Object) this;
+        EntityTasks.onMain(player, () -> EntityTasks.call(player, () -> {
+            original.call(tag);
+            return null;
+        }));
     }
 
     @WrapMethod(method = "interactOn")
