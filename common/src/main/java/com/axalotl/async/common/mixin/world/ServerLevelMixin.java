@@ -173,7 +173,8 @@ public abstract class ServerLevelMixin
     private void skipSendBlockUpdatedCheck(ServerLevel instance, boolean value) {
     }
 
-    @WrapMethod(method = "addEntity")
+    /** Owns registration before public-entry callbacks can defer it or replace its result. */
+    @WrapMethod(method = {"addFreshEntity", "addWithUUID", "addEntity"})
     private boolean async$addEntity(Entity entity, Operation<Boolean> original) {
         if (!ParallelProcessor.isServerExecutionThread()) {
             return original.call(entity);

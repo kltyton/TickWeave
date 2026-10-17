@@ -65,12 +65,20 @@ public abstract class EntityMixin implements EntityTaskAccess {
     @Shadow
     public abstract Level level();
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
+    /** Completes a registered entity's full removal transaction on its world thread. */
     @WrapMethod(method={"setRemoved"})
     private void setRemoved(Entity.RemovalReason reason, Operation<Void> original) {
-        EntityTasks.execute((Entity) (Object) this, () -> original.call(reason));
+        Entity entity = (Entity) (Object) this;
+        EntityTasks.execute(entity, () -> {
+            if (tickweave$inLevel()) {
+                EntityTasks.onMain(entity, () -> {
+                    original.call(reason);
+                    return null;
+                });
+            } else {
+                original.call(reason);
+            }
+        });
     }
 
     @WrapMethod(method = "push(DDD)V")
