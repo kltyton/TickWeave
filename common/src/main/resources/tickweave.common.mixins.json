@@ -21,6 +21,7 @@
     "accessor.NaturalSpawnerAccessor",
     "accessor.SpawnStateAccessor",
     "accessor.TurtleAccessor",
+    "block.BubbleColumnBlockMixin",
     "entity.AllayMixin",
     "entity.AnimalMixin",
     "entity.AreaEffectCloudMixin",
