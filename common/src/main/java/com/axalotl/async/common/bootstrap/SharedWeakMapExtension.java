@@ -1,6 +1,7 @@
 package com.axalotl.async.common.bootstrap;
 
 import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+import com.axalotl.async.common.bootstrap.worldgen.NoiseInterpolationExtension;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Opcodes;
@@ -87,6 +88,9 @@ public final class SharedWeakMapExtension implements IExtension {
         }
         if (extensions.getExtensions().stream().noneMatch(ChunkDeliveryExtension.class::isInstance)) {
             extensions.add(new ChunkDeliveryExtension());
+        }
+        if (extensions.getExtensions().stream().noneMatch(NoiseInterpolationExtension.class::isInstance)) {
+            extensions.add(new NoiseInterpolationExtension());
         }
     }
 

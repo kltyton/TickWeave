@@ -1,31 +1,41 @@
 package com.axalotl.async.common.mixin.worldgen;
 
+import com.axalotl.async.common.bootstrap.worldgen.NoiseInterpolationExtension;
 import com.axalotl.async.common.worldgen.NoiseInterpolationState;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import net.minecraft.world.level.levelgen.NoiseChunk;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
+/** Publishes lazy Z steps without depending on the interpolator loop's implementation. */
 @Mixin(NoiseChunk.class)
 public abstract class NoiseChunkMixin implements NoiseInterpolationState {
+    @Shadow @Final private List<NoiseChunk.NoiseInterpolator> interpolators;
     @Unique private long tickweave$zRevision;
     @Unique private double tickweave$zFraction;
+    @Unique private boolean tickweave$customInterpolators;
 
-    @Inject(method = "updateForZ", at = @At("HEAD"))
-    private void tickweave$advanceZ(int blockZ, double fraction, CallbackInfo ci) {
+    @Invoker("updateForZ")
+    public abstract void tickweave$invokeUpdateForZ(int blockZ, double fraction);
+
+    @Override
+    public boolean tickweave$deferZ(double fraction, String updateMethod) {
+        if (tickweave$customInterpolators || interpolators.getClass() != ArrayList.class
+                || !NoiseInterpolationExtension.isPureZ(NoiseChunk.NoiseInterpolator.class, updateMethod)) {
+            return false;
+        }
         tickweave$zFraction = fraction;
         tickweave$zRevision++;
+        return true;
     }
 
-    @Redirect(method = "updateForZ", at = @At(value = "INVOKE",
-            target = "Ljava/util/List;forEach(Ljava/util/function/Consumer;)V"))
-    private void tickweave$deferInterpolation(List<?> interpolators, Consumer<?> update) {
-        // Each interpolator evaluates this Z step only when its density is requested.
+    @Override
+    public void tickweave$markCustomInterpolator() {
+        tickweave$customInterpolators = true;
     }
 
     @Override

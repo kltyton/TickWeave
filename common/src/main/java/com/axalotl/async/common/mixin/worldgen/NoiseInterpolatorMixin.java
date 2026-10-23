@@ -8,23 +8,32 @@ import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+/** Resolves pending Z values before reads and before the X coefficients change. */
 @Mixin(NoiseChunk.NoiseInterpolator.class)
-public abstract class NoiseInterpolatorMixin {
+public abstract class NoiseInterpolatorMixin implements NoiseInterpolationState.Reader {
     @Shadow private double valueZ0;
     @Shadow private double valueZ1;
     @Shadow private double value;
     @Unique private NoiseInterpolationState tickweave$owner;
     @Unique private long tickweave$zRevision;
 
+    @Override
+    @Invoker("updateForZ")
+    public abstract void tickweave$invokeUpdateForZ(double fraction);
+
     @Inject(method = "<init>", at = @At("RETURN"))
     private void tickweave$rememberOwner(NoiseChunk owner, DensityFunction filler, CallbackInfo ci) {
         tickweave$owner = (NoiseInterpolationState) owner;
         tickweave$zRevision = tickweave$owner.tickweave$zRevision();
+        if (((Object) this).getClass() != NoiseChunk.NoiseInterpolator.class) {
+            tickweave$owner.tickweave$markCustomInterpolator();
+        }
     }
 
     @Inject(method = "compute", at = @At(value = "FIELD", opcode = Opcodes.GETFIELD,
@@ -40,13 +49,13 @@ public abstract class NoiseInterpolatorMixin {
         tickweave$resolveZ();
     }
 
-    @Inject(method = "updateForZ", at = @At("RETURN"))
+    @Inject(method = "updateForZ(D)V", at = @At("RETURN"))
     private void tickweave$recordExplicitUpdate(double fraction, CallbackInfo ci) {
         tickweave$zRevision = tickweave$owner.tickweave$zRevision();
     }
 
-    @Unique
-    private void tickweave$resolveZ() {
+    @Override
+    public void tickweave$resolveZ() {
         long revision = tickweave$owner.tickweave$zRevision();
         if (tickweave$zRevision != revision) {
             value = Mth.lerp(tickweave$owner.tickweave$zFraction(), valueZ0, valueZ1);
