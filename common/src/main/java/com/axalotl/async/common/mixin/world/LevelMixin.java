@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-@Mixin(value = { Level.class }, priority = 1500)
+@Mixin(value = { Level.class }, priority = 999)
 public abstract class LevelMixin
         implements LevelAccessor,
         AutoCloseable {
@@ -40,10 +40,12 @@ public abstract class LevelMixin
     @Final
     public RandomSource random;
 
-    @Redirect(method = {
-            "getBlockEntity" }, at = @At(value = "INVOKE", target = "Ljava/lang/Thread;currentThread()Ljava/lang/Thread;"))
-    private Thread overwriteCurrentThread() {
-        return ParallelProcessor.isServerExecutionThread() ? thread : Thread.currentThread();
+    @WrapOperation(
+            method = "getBlockEntity",
+            at = @At(value = "INVOKE", target = "Ljava/lang/Thread;currentThread()Ljava/lang/Thread;")
+    )
+    private Thread overwriteCurrentThread(Operation<Thread> original) {
+        return ParallelProcessor.isServerExecutionThread() ? thread : original.call();
     }
 
     @WrapOperation(method = "getEntities(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;Ljava/util/function/Predicate;)Ljava/util/List;",
