@@ -1,14 +1,14 @@
 package com.axalotl.async.common.mixin.world;
 
 import com.axalotl.async.common.ParallelProcessor;
-import com.axalotl.async.common.entity.query.CollisionQuery;
 import com.axalotl.async.common.entity.query.CollisionClassFilter;
+import com.axalotl.async.common.entity.query.CollisionQuery;
+import com.axalotl.async.common.utils.ContextAwareRandomSource;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 import net.minecraft.util.AbortableIterationConsumer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.level.Level;
@@ -17,9 +17,15 @@ import net.minecraft.world.level.entity.LevelEntityGetter;
 import net.minecraft.world.phys.AABB;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 @Mixin(value = { Level.class }, priority = 1500)
 public abstract class LevelMixin
@@ -29,10 +35,15 @@ public abstract class LevelMixin
     @Final
     private Thread thread;
 
+    @Mutable
+    @Shadow
+    @Final
+    public RandomSource random;
+
     @Redirect(method = {
             "getBlockEntity" }, at = @At(value = "INVOKE", target = "Ljava/lang/Thread;currentThread()Ljava/lang/Thread;"))
     private Thread overwriteCurrentThread() {
-        return ParallelProcessor.isServerExecutionThread() ? this.thread : Thread.currentThread();
+        return ParallelProcessor.isServerExecutionThread() ? thread : Thread.currentThread();
     }
 
     @WrapOperation(method = "getEntities(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;Ljava/util/function/Predicate;)Ljava/util/List;",
@@ -48,4 +59,8 @@ public abstract class LevelMixin
         }
     }
 
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void tickweave$wrapLevelRandom(CallbackInfo ci) {
+        random = new ContextAwareRandomSource(random);
+    }
 }
