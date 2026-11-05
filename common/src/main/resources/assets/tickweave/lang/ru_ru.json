@@ -1,0 +1,12 @@
+{
+  "tickweave.stats.batch.title": "\n\nСтатистика пакетов (реальное время группы включает ожидания):",
+  "tickweave.stats.batch.entity": "Сущности",
+  "tickweave.stats.batch.connection": "Соединения",
+  "tickweave.stats.batch.phase": "\n%s: %s пакетов, %s групп/пакетов",
+  "tickweave.stats.batch.largest": "\nСамая большая группа: ",
+  "tickweave.stats.batch.slowest": "\nСамая медленная группа: %s мс; ",
+  "tickweave.stats.batch.group": "Пакет %s, %s; %s/%s записей, %s групп",
+  "tickweave.stats.batch.members": "\n  Классы: %s",
+  "tickweave.stats.batch.actors": "\n  ID сущностей: %s",
+  "tickweave.stats.batch.bindings": "\n  Связи слияния, изменяющие компоненты: %s"
+}
