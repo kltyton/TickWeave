@@ -39,7 +39,7 @@ public abstract class AsyncCommon {
             LOGGER.info("Detected: Harium + HariPlayer together - PalettedContainer lock removal handled by Harium");
         }
         if (CCE) {
-            LOGGER.info("Detected: CCE - Threading synchronized");
+            LOGGER.info("Detected: CCE - Custom attributes will be reading");
             LOGGER.info("  -> Enable CCE compatibility");
         }
         if (!(LITHIUM || HARIPLAYER || HARICHUNK || CCE)) {
