@@ -7,10 +7,13 @@ import net.minecraft.commands.CommandSourceStack;
 
 public class PlatformUtils {
     private static final ModPlatform MOD_PLATFORM = PlatformUtils.load(ModPlatform.class);
+    private static CCEPlatform CCE_PLATFORM;
+
     private static MinecraftPlatform minecraftPlatform;
 
     public static void initialize() {
         minecraftPlatform = PlatformUtils.load(MinecraftPlatform.class);
+        getCCEPlatformLazy();
     }
 
     public static boolean platformUsesRefmap() {
@@ -35,6 +38,10 @@ public class PlatformUtils {
 
     public static boolean hasPermission(CommandSourceStack source, String node, int level) {
         return minecraftPlatform.hasPermission(source, node, level);
+    }
+
+    public static CCEPlatform getCCEPlatformLazy() {
+        return CCE_PLATFORM == null ? CCE_PLATFORM = PlatformUtils.load(CCEPlatform.class) : CCE_PLATFORM;
     }
 
     private static <T> T load(Class<T> clazz) {
