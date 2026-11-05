@@ -1,5 +1,6 @@
 package com.axalotl.async.common.entity.task;
 
+import com.axalotl.async.common.AsyncCommon;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
@@ -77,7 +78,8 @@ final class SharedEntityState {
                     || type.getName().startsWith("java.util.Collections$Empty");
             boolean children = CompoundTag.class.isAssignableFrom(type) || ListTag.class.isAssignableFrom(type)
                     || ByteArrayTag.class.isAssignableFrom(type) || IntArrayTag.class.isAssignableFrom(type)
-                    || LongArrayTag.class.isAssignableFrom(type) || ItemStack.class.isAssignableFrom(type);
+                    || LongArrayTag.class.isAssignableFrom(type) || ItemStack.class.isAssignableFrom(type)
+                    || (AsyncCommon.CCE && type.getName().contains("ComponentContainer"));
             boolean ownerRead = container.fixed() || ItemStack.class.isAssignableFrom(type) || type == Potion.class || type == DamageSource.class
                     || ImmutableCollection.class.isAssignableFrom(type) || ImmutableMap.class.isAssignableFrom(type)
                     || CompoundTag.class.isAssignableFrom(type) && type != CompoundTag.class
@@ -313,6 +315,7 @@ final class SharedEntityState {
         final ArrayDeque<Object> children = new ArrayDeque<>();
         final boolean ownerThread;
         String origin;
+        Entity currentEntity;
 
         Capture(boolean ownerThread) {
             this.ownerThread = ownerThread;
@@ -323,6 +326,7 @@ final class SharedEntityState {
             try {
                 for (int i = first; i < end; i++) {
                     Entity entity = input.entities.get(i);
+                    this.currentEntity = entity;
                     Domain domain = input.entityDomains.get(i);
                     EntityFields layout = FIELDS.get(entity.getClass());
                     MethodHandle[] getters = layout.getters();
@@ -372,7 +376,7 @@ final class SharedEntityState {
             shards[(hash ^ (hash >>> 16)) & (shards.length - 1)].add(value, domain, origin);
             if (!scanType.children()) return;
             // Keep every ownership edge, but expand each local shared/cyclic topology only once.
-            if (expanded.put(value, Boolean.TRUE) == null) addTagChildren(value, children);
+            if (expanded.put(value, Boolean.TRUE) == null) addTagChildren(value, children, this.currentEntity);
         }
 
         void clear() {
@@ -387,6 +391,7 @@ final class SharedEntityState {
             fixedDomains.clear();
             children.clear();
             origin = null;
+            currentEntity = null;
         }
     }
 
@@ -460,7 +465,7 @@ final class SharedEntityState {
                 || StringTag.class.isAssignableFrom(type) || EndTag.class.isAssignableFrom(type);
     }
 
-    private static void addTagChildren(Object value, ArrayDeque<Object> children) {
+    private static void addTagChildren(Object value, ArrayDeque<Object> children, Entity rootEntity) {
         if (value instanceof CompoundTag compound) {
             if (value.getClass() == CompoundTag.class && compound.isEmpty()) return;
             for (String key : compound.getAllKeys()) {
@@ -476,6 +481,9 @@ final class SharedEntityState {
         else if (value instanceof IntArrayTag array) children.add(array.getAsIntArray());
         else if (value instanceof LongArrayTag array) children.add(array.getAsLongArray());
         else if (value instanceof ItemStack stack && stack.getTag() != null) children.add(stack.getTag());
+        else if (AsyncCommon.CCE && value.getClass().getName().contains("ComponentContainer")) {
+            if (rootEntity != null) children.addAll(PlatformUtils.getCCEPlatformLazy().getComponents(rootEntity));
+        }
     }
 
     private static void addMutableTagChild(Object child, ArrayDeque<Object> children) {

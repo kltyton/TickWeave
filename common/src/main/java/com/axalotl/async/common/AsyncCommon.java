@@ -11,6 +11,7 @@ public abstract class AsyncCommon {
             || PlatformUtils.isModLoaded("radium");
     public static boolean HARIPLAYER = PlatformUtils.isModLoaded("hariplayer") || PlatformUtils.isModLoaded("vmp");
     public static boolean HARICHUNK = PlatformUtils.isModLoaded("harichunk") || PlatformUtils.isModLoaded("c2me");
+    public static boolean CCE = PlatformUtils.isModLoaded("cardinal_components_entity");
 
     public final void initialize() {
         PlatformUtils.initialize();
@@ -37,7 +38,11 @@ public abstract class AsyncCommon {
         if (LITHIUM && HARIPLAYER) {
             LOGGER.info("Detected: Harium + HariPlayer together - PalettedContainer lock removal handled by Harium");
         }
-        if (!(LITHIUM || HARIPLAYER || HARICHUNK)) {
+        if (CCE) {
+            LOGGER.info("Detected: CCE - Threading synchronized");
+            LOGGER.info("  -> Enable CCE compatibility");
+        }
+        if (!(LITHIUM || HARIPLAYER || HARICHUNK || CCE)) {
             LOGGER.info("No conflicting optimization mods detected - Full async mode enabled");
         }
         LOGGER.info("=========================================");
